@@ -1,103 +1,40 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View
-
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.ElevatedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.AppNavigation
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MemoriesBookTheme
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myButton
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
 
 class MainActivity : ComponentActivity() {
+    private val postList=ArrayList<Posts>()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
         setContent {
             MemoriesBookTheme {
                 AppNavigation()
             }
         }
     }
-}
+    private fun gonderiler(){
+        val post1=Posts("mahmutconger@gmail.com","Bu ilk post ",url1,"1")
+        val post3=Posts("mahmutconger@gmail.com","2.projem 2. video ",url1,"2")
+        val post4=Posts("mahmutconger@gmail.com","bugün günlerden cumartesi",url1,"2")
+        val post5=Posts("mahmutconger@gmail.com","Ödevi unutma",url1,"2")
+        val post2=Posts("mahmutconger@gmail.com","ne yapacağız",url1,"2")
 
-
-@Composable
-fun AppNavigation() {
-    val navController = rememberNavController()
-    NavHost(navController = navController, startDestination = "welcome_screen") {
-        composable("welcome_screen") {
-            WellComeScreen(navController = navController)
-        }
-        composable("register_screen") {
-            RegisterScreen(navController)
-        }
-        composable("login_screen"){
-            LoginScreen(navController)
-        }
-
+        postList.add(post1)
+        postList.add(post2)
+        postList.add(post3)
+        postList.add(post4)
+        postList.add(post5)
     }
 }
 
 
-@Composable
-fun WellComeScreen(modifier: Modifier = Modifier, navController: NavController) {
-    Column(
-        modifier
-            .fillMaxSize()
-            .background(brush = myBrush() )
-    ) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(end = 15.dp, top = 40.dp),
-            horizontalAlignment = Alignment.End
-        ) {
-            myText("Merhaba!", 21, FontWeight.Bold, Color.White)
-            myText("Tekrardan Hoş Geldiniz", 16, FontWeight.Light, Color.White)
-        }
-        Column(
-            Modifier
-                .fillMaxSize()
-                .weight(1f),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            val deger = remember { mutableStateOf("Daha Önce Geldin Mi?") }
-            myText(deger.value, 16, FontWeight.ExtraBold, Color.White)
-            mySpacer(10)
-            myButton("Giriş Yap", true) {
-                navController.navigate("login_screen")
-                deger.value = "evet"
-                Log.d("btnTag", "Giriş Yap butonuna basıldı.")
-            }
-            mySpacer(10)
-            myText("Hayır mı?", 16, FontWeight.Bold, Color.White)
-            mySpacer(10)
-            myButton("Kayıt Ol", false) {
-                navController.navigate("register_screen")
-                Log.d("btnTag", "Kayıt Ol butonuna basıldı.")
-            }
-        }
-    }
-}
+
+
+
+
