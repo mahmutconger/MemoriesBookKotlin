@@ -24,33 +24,30 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
 
-// 1. HomeScreen'i Scaffold ile yeniden yapılandırıyoruz.
 @Composable
 fun HomeScreen(
     navController: NavController,
     postList: List<Posts>
-) { // ArrayList yerine List kullanmak daha iyi bir pratiktir.
+) {
     val context = LocalContext.current
 
     Scaffold(
         topBar = {
-            // Scaffold'un üst bar yuvasına kendi Row'umuzu koyuyoruz.
             TopAppBar(onOptionsMenuClick = { showToast(context, "Options Tıklandı") })
         },
         bottomBar = {
-            // Scaffold'un alt bar yuvasına kendi Row'umuzu koyuyoruz.
             BottomNavigationBar(context = context)
         }
     ) { innerPadding ->
-        // Scaffold'un ana içerik alanı burasıdır.
-        // 'innerPadding' parametresi, içeriğin üst ve alt barların altına girmesini engeller.
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding) // 2. Scaffold'un verdiği padding'i uyguluyoruz.
+                .padding(innerPadding)
         ) {
-            // 3. Sabit bir sayı yerine, gelen postList'i kullanıyoruz.
             items(items = postList) { post ->
                 PostItem(post = post)
             }
@@ -58,7 +55,6 @@ fun HomeScreen(
     }
 }
 
-// Okunabilirlik için üst barı ayrı bir Composable'a taşıdık.
 @Composable
 fun TopAppBar(onOptionsMenuClick: () -> Unit) {
     Row(
@@ -78,7 +74,6 @@ fun TopAppBar(onOptionsMenuClick: () -> Unit) {
     }
 }
 
-// Okunabilirlik için alt barı ayrı bir Composable'a taşıdık.
 @Composable
 fun BottomNavigationBar(context: Context) {
     Row(
@@ -88,14 +83,33 @@ fun BottomNavigationBar(context: Context) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround
     ) {
-        myImageButton(id = R.drawable.home_icon) { showToast(context, "Home Tıklandı") }
-        myImageButton(id = R.drawable.person_ico) { showToast(context, "Person Tıklandı") }
-        myImageButton(id = R.drawable.add_post) { showToast(context, "Add Post Tıklandı") }
-        myImageButton(id = R.drawable.message_circle2) { showToast(context, "Message Tıklandı") }
+        myImageButton(id = R.drawable.home_icon, tintColor = Color.Black) {
+            showToast(
+                context,
+                "Home Tıklandı"
+            )
+        }
+        myImageButton(id = R.drawable.person_ico, tintColor = Color.Black) {
+            showToast(
+                context,
+                "Person Tıklandı"
+            )
+        }
+        myImageButton(id = R.drawable.add_post, tintColor = Color.Black) {
+            showToast(
+                context,
+                "Add Post Tıklandı"
+            )
+        }
+        myImageButton(id = R.drawable.message_circle2, tintColor = Color.Black) {
+            showToast(
+                context,
+                "Message Tıklandı"
+            )
+        }
     }
 }
 
-// Her bir post'un nasıl görüneceğini belirleyen Composable
 @Composable
 fun PostItem(post: Posts) {
     Card(
@@ -108,39 +122,25 @@ fun PostItem(post: Posts) {
             Text(text = post.email, fontWeight = FontWeight.Bold)
 
             Spacer(modifier = Modifier.height(8.dp))
-            AsyncImage(model = post.downloadUrl, contentDescription = "Post Image")
-
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AsyncImage(model = post.downloadUrl, contentDescription = "Post Image", modifier = Modifier.size(400.dp))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(text = post.comment)
         }
     }
-}
-
-// myImageButton ve showToast fonksiyonları aynı kalabilir.
-@Composable
-fun myImageButton(id: Int, onClick: () -> Unit) {
-    Image(
-        modifier = Modifier
-            .size(30.dp)
-            .clickable(onClick = onClick),
-        painter = painterResource(id = id),
-        contentDescription = "Action Icon",
-        colorFilter = ColorFilter.tint(Color.Black)
-    )
-}
-
-fun showToast(context: Context, msg: String, isLengthLong: Boolean = false) {
-    val duration = if (isLengthLong) Toast.LENGTH_LONG else Toast.LENGTH_SHORT
-    Toast.makeText(context, msg, duration).show()
 }
 
 
 @Preview(showBackground = true)
 @Composable
 fun prev_Home() {
-    val url1 =
-        "https://firebasestorage.googleapis.com/v0/b/englishwordapp-7fb3b.firebasestorage.app/o/gorsel%2F12fb5b13-5eaa-44c4-a9f2-df7def4dba05.jpg?alt=media&token=11239fac-d521-4863-bbaf-5afedc313b4e"
     val post1 = Posts("mahmutconger@gmail.com", "Bu ilk post ", url1, "1")
     val post2 = Posts("user@test.com", "Bu da ikinci postum!", url1, "2")
-    val postList = arrayListOf(post1, post2) // arrayListOf() daha kısa bir kullanım
+    val postList = arrayListOf(post1, post2)
     HomeScreen(rememberNavController(), postList)
 }
