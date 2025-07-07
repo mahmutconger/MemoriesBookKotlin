@@ -1,0 +1,150 @@
+import android.icu.text.ListFormatter.Width
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardColors
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CardElevation
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.anlarsinsoftware.memoriesbook.R
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
+
+@Composable
+fun CommentBottomSheetContent(
+    post: Posts,
+    commentList: List<Comments>,
+    onHide: () -> Unit,
+    onLikeClick: (Comments) -> Unit
+) {
+    var commentTextState by remember { mutableStateOf("") }
+
+    Column(
+        Modifier
+            .padding(16.dp)
+            .fillMaxHeight(0.8f)
+            .imePadding()
+    ) {
+        // --- BAŞLIK BÖLÜMÜ ---
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween, // Başlık ortada, kapatma butonu sağda
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Yorumlar", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            // 5. İYİLEŞTİRME: Kapatma butonu eklendi.
+            IconButton(onClick = onHide) {
+                Icon(Icons.Default.Close, contentDescription = "Yorumları Kapat")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ) {
+            items(items = commentList) { item ->
+                CommentItem(
+                    comment = item,
+                    onLikeClick = { onLikeClick(item) }
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedTextField(
+                value = commentTextState,
+                onValueChange = { new -> commentTextState = new },
+                label = { Text("Yorum Ekle") },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            IconButton(onClick = {
+                // Yorum gönderme mantığı buraya eklenecek.
+            }) {
+                Icon(Icons.Default.Send, contentDescription = "Yorumu Gönder")
+            }
+        }
+    }
+}
+
+@Composable
+fun CommentItem(comment: Comments, onLikeClick: () -> Unit) {
+    Card(
+        Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp)
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .padding(5.dp)) {
+            Row() {
+                Text(comment.user, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Spacer(Modifier.weight(1f))
+                Text(comment.date, fontSize = 12.sp, color = Color.Gray)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(comment.comment, fontSize = 14.sp)
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                val likeIcon =
+                    if (comment.isLiked) R.drawable.like_selected else R.drawable.like_unselected
+
+                myImageButton(
+                    id = likeIcon,
+                    imageSize = 25,
+                    onClick = onLikeClick
+                )
+
+                Spacer(Modifier.width(15.dp))
+            }
+
+
+        }
+    }
+}
+
+// 6. İYİLEŞTİRME: Çalışan bir önizleme fonksiyonu
+@Preview(showBackground = true)
+@Composable
+private fun CommentBottomSheetContent_Preview() {
+    val samplePost = Posts("user@test.com", "", "", "1", "")
+    val sampleComments = listOf(
+        Comments("Harika bir paylaşım!", "07.07.2025", "ahmet", "c1", "1", true),
+        Comments("Ben de oraya gitmek istiyorum.", "07.07.2025", "zeynep", "c2", "1", false),
+        Comments("Fotoğraf çok güzel çıkmış.", "07.07.2025", "ali", "c3", "1", false)
+    )
+    CommentBottomSheetContent(
+        post = samplePost,
+        commentList = sampleComments,
+        onHide = {}, onLikeClick = {}
+    )
+}
