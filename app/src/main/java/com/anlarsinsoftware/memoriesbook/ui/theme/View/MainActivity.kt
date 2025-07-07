@@ -18,19 +18,6 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-    private fun gonderiler(){
-        val post1=Posts("mahmutconger@gmail.com","Bu ilk post ",url1,"1")
-        val post3=Posts("mahmutconger@gmail.com","2.projem 2. video ",url1,"2")
-        val post4=Posts("mahmutconger@gmail.com","bugün günlerden cumartesi",url1,"2")
-        val post5=Posts("mahmutconger@gmail.com","Ödevi unutma",url1,"2")
-        val post2=Posts("mahmutconger@gmail.com","ne yapacağız",url1,"2")
-
-        postList.add(post1)
-        postList.add(post2)
-        postList.add(post3)
-        postList.add(post4)
-        postList.add(post5)
-    }
 }
 
 
