@@ -13,6 +13,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CardElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -34,24 +35,21 @@ fun CommentBottomSheetContent(
     post: Posts,
     commentList: List<Comments>,
     onHide: () -> Unit,
-    onLikeClick: (Comments) -> Unit
+    onCommentLikeClicked: (Comments) -> Unit
 ) {
     var commentTextState by remember { mutableStateOf("") }
 
     Column(
         Modifier
             .padding(16.dp)
-            .fillMaxHeight(0.8f)
             .imePadding()
     ) {
-        // --- BAŞLIK BÖLÜMÜ ---
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween, // Başlık ortada, kapatma butonu sağda
+            modifier = Modifier.fillMaxWidth().imePadding(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Yorumlar", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            // 5. İYİLEŞTİRME: Kapatma butonu eklendi.
             IconButton(onClick = onHide) {
                 Icon(Icons.Default.Close, contentDescription = "Yorumları Kapat")
             }
@@ -60,12 +58,13 @@ fun CommentBottomSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         LazyColumn(
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.fillMaxWidth()
+                .imePadding()
         ) {
             items(items = commentList) { item ->
                 CommentItem(
                     comment = item,
-                    onLikeClick = { onLikeClick(item) }
+                    onLikeClick = { onCommentLikeClicked(item) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -74,8 +73,8 @@ fun CommentBottomSheetContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth().imePadding(),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
                 value = commentTextState,
@@ -132,7 +131,6 @@ fun CommentItem(comment: Comments, onLikeClick: () -> Unit) {
     }
 }
 
-// 6. İYİLEŞTİRME: Çalışan bir önizleme fonksiyonu
 @Preview(showBackground = true)
 @Composable
 private fun CommentBottomSheetContent_Preview() {
@@ -145,6 +143,6 @@ private fun CommentBottomSheetContent_Preview() {
     CommentBottomSheetContent(
         post = samplePost,
         commentList = sampleComments,
-        onHide = {}, onLikeClick = {}
+        onHide = {}, onCommentLikeClicked = {}
     )
 }
