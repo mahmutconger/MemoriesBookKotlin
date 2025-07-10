@@ -8,10 +8,10 @@
             <InsightsFilterSettings>
               <option name="connection">
                 <ConnectionSetting>
-                  <option name="appId" value="PLACEHOLDER" />
-                  <option name="mobileSdkAppId" value="" />
-                  <option name="projectId" value="" />
-                  <option name="projectNumber" value="" />
+                  <option name="appId" value="com.anlarsinsoftware.memoriesbook" />
+                  <option name="mobileSdkAppId" value="1:309899020171:android:fdea3e26ececc2c221118e" />
+                  <option name="projectId" value="javafirebase-69dbe" />
+                  <option name="projectNumber" value="309899020171" />
                 </ConnectionSetting>
               </option>
               <option name="signal" value="SIGNAL_UNSPECIFIED" />
