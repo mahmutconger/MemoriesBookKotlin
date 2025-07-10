@@ -10,6 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -21,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -30,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
-import coil.size.Size
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 
@@ -40,7 +44,9 @@ fun CreatePostScreen(navController: NavController) {
     val context = LocalContext.current
     Scaffold(topBar = {
 
-        topBar { navController.navigate("home_screen") }
+        topBar {
+            navController.popBackStack()
+        }
     }) { innerPadding ->
         Column(
             Modifier
@@ -49,18 +55,15 @@ fun CreatePostScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-//            Text(
-//                text = "Lütfen Eklenecek Görseli Seçiniz.",
-//                fontWeight = FontWeight.Bold,
-//                modifier = Modifier
-//                    .padding(16.dp)
-//            )
             Image(
                 painter = painterResource(R.drawable.add_post),
                 contentDescription = "Resim seçmek için basınız.",
                 modifier = Modifier
                     .size(300.dp)
                     .padding(8.dp)
+                    .clickable {
+                        //Fotoğraf seçme kısmı burada olacak.
+                    }
             )
             OutlinedTextField(modifier=Modifier.height(100.dp), value= "",
                 label = {
@@ -85,10 +88,13 @@ fun topBar(onBackCilck:()->Unit) {
         .height(56.dp)
         .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically){
-        Image(painter = painterResource(R.drawable.back_ico_outlined),
-            contentDescription ="Geri gitmek için basın.",
-            modifier = Modifier.size(30.dp)
-                .clickable { onBackCilck })
+        IconButton(onClick = { onBackCilck() }) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                tint= Color.Black,
+                contentDescription = "Geri Butonu"
+            )
+        }
 
         Text("Anı Oluştur",
             Modifier.fillMaxWidth(),
