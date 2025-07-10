@@ -1,13 +1,22 @@
 import android.content.Context
+import android.graphics.drawable.Icon
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,25 +32,35 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MemoriesBookTheme
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.BottomSheetContent
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
+    homeViewModel: HomeViewModel,
+    commentsViewModel: CommentsViewModel,
     postList: List<Posts>,
-    commentList: List<Comments>
+    commentList: List<Comments>,
+    onPostLikeClicked: (Posts) -> Unit,
+    onCommentLikeClicked: (Comments) -> Unit
 ) {
     val context = LocalContext.current
     val optionsSheetState = rememberModalBottomSheetState()
@@ -49,17 +68,33 @@ fun HomeScreen(
     val scope = rememberCoroutineScope()
     var selectedPost by remember { mutableStateOf<Posts?>(null) }
 
-    var posts by remember { mutableStateOf(postList) }
-    var comments by remember { mutableStateOf(commentList) }
-
     Scaffold(
         topBar = {
-            TopAppBar(onOptionsMenuClick = { showToast(context, "Options Tıklandı") })
+            TopAppBar(title = {
+                Text("Memories Book", fontWeight = FontWeight.Medium)
+            }, actions = {
+                IconButton(onClick = {}) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        tint = MaterialTheme.colorScheme.primary,
+                        contentDescription = "Seçenekler Menüsü"
+                    )
+                }
+            })
         },
         bottomBar = {
-            BottomNavigationBar(context = context, createPostClick = {
-                navController.navigate("createPost_screen")
-            })
+            BottomNavigationBar(
+                context = context,
+                createPostClick = {
+                    navController.navigate("createPost_screen")
+                },
+                profileClick = {
+                    navController.navigate("profile_screen")
+                },messageClick={
+
+                },homeClick={
+                },homeTint = MaterialTheme.colorScheme.primary
+            )
         }
     ) { innerPadding ->
         LazyColumn(
@@ -67,7 +102,7 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            items(items = posts) { post ->
+            items(items = postList) { post ->
                 PostItem(
                     post = post,
                     onMenuClick = {
@@ -75,14 +110,11 @@ fun HomeScreen(
                         scope.launch { optionsSheetState.show() }
                     },
                     onLikeClick = {
-                        posts = posts.map { p ->
-                            if (p.documentId.equals(post.documentId)) {
-                                p.copy(isLiked = !p.isLiked)
-                            } else {
-                                p
-                            }
-                        }
-                    }, onCommentClick = {
+                        onPostLikeClicked(post)
+                    },
+                    onCommentClick = {
+                        Log.d("CommentClick", "Yorumlar için tıklandı. Post ID: ${post.documentId}")
+                        commentsViewModel.fetchCommentsForPost(post.documentId)
                         selectedPost = post
                         scope.launch { commentSheetState.show() }
                     }
@@ -115,20 +147,13 @@ fun HomeScreen(
             onDismissRequest = { scope.launch { commentSheetState.hide() } }
         ) {
             selectedPost?.let { post ->
-                // 1. Yorumları burada, göndermeden önce FİLTRELİYORUZ.
-                val commentsForPost = comments.filter { it.documentId == post.documentId }
 
                 CommentBottomSheetContent(
                     post = post,
-                    // 2. Sadece filtrelenmiş listeyi gönderiyoruz.
-                    commentList = commentsForPost,
-                    onLikeClick = { likedComment ->
-                        comments = comments.map { c ->
-                            if (c.documentId == likedComment.documentId) {
-                                c.copy(isLiked = !c.isLiked)
-                            } else {
-                                c
-                            }
+                    commentList = commentList,
+                    onCommentLikeClicked = { likedComment ->
+                        selectedPost?.let { post ->
+                            onCommentLikeClicked(likedComment)
                         }
                     },
                     onHide = { scope.launch { commentSheetState.hide() } }
@@ -139,7 +164,12 @@ fun HomeScreen(
 }
 
 @Composable
-fun PostItem(post: Posts, onMenuClick: () -> Unit,onLikeClick:()->Unit,onCommentClick:()->Unit) {
+fun PostItem(
+    post: Posts,
+    onMenuClick: () -> Unit,
+    onLikeClick: () -> Unit,
+    onCommentClick: () -> Unit
+) {
     Card(
         modifier = Modifier
 
@@ -156,10 +186,11 @@ fun PostItem(post: Posts, onMenuClick: () -> Unit,onLikeClick:()->Unit,onComment
                 myImageButton(
                     R.drawable.menu_vertical,
                     imageSize = 20,
-                    onClick = onMenuClick
+                    onClick = onMenuClick,
+                    tintColor = MaterialTheme.colorScheme.primary
                 )
             }
-            Text(post.date)
+            Text(post.date, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
             Spacer(modifier = Modifier.height(8.dp))
             AsyncImage(
                 model = post.downloadUrl,
@@ -174,70 +205,25 @@ fun PostItem(post: Posts, onMenuClick: () -> Unit,onLikeClick:()->Unit,onComment
             mySpacer(10)
 
             Row(Modifier.fillMaxWidth()) {
-                val likeIcon = if (post.isLiked) R.drawable.like_selected else R.drawable.like_unselected
+                val likeIcon =
+                    if (post.isLiked) R.drawable.like_selected else R.drawable.like_unselected
 
                 myImageButton(
                     id = likeIcon,
                     imageSize = 25,
-                    onClick = onLikeClick
+                    onClick = onLikeClick,
+                    tintColor = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(Modifier.width(15.dp))
-                myImageButton(R.drawable.comment_icon, 25, Color.Black, onClick = onCommentClick)
+                myImageButton(
+                    R.drawable.comment_icon,
+                    25,
+                    tintColor = MaterialTheme.colorScheme.primary,
+                    onClick = onCommentClick
+                )
             }
 
-        }
-    }
-}
-
-@Composable
-fun TopAppBar(onOptionsMenuClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            "Memories Book",
-            fontWeight = FontWeight.Bold,
-            color = Color.Black
-        )
-        Spacer(modifier = Modifier.weight(1f))
-        myImageButton(id = R.drawable.options_ico, onClick = onOptionsMenuClick)
-    }
-}
-
-@Composable
-fun BottomNavigationBar(context: Context,createPostClick:()->Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceAround
-    ) {
-        myImageButton(id = R.drawable.home_icon, tintColor = Color.Black) {
-            showToast(
-                context,
-                "Home Tıklandı"
-            )
-        }
-        myImageButton(id = R.drawable.person_ico, tintColor = Color.Black) {
-            showToast(
-                context,
-                "Person Tıklandı"
-            )
-        }
-        myImageButton(id = R.drawable.add_post, tintColor = Color.Black) {
-            createPostClick()
-        }
-        myImageButton(id = R.drawable.message_circle2, tintColor = Color.Black) {
-            showToast(
-                context,
-                "Message Tıklandı"
-            )
         }
     }
 }
@@ -246,11 +232,15 @@ fun BottomNavigationBar(context: Context,createPostClick:()->Unit) {
 @Preview(showBackground = true)
 @Composable
 fun prev_Home() {
-    val post1 = Posts("mahmutconger@gmail.com", "06.07.2025","Bu ilk post ", url1, "1")
-    val post2 = Posts("user@test.com", "06.07.2025","Bu da ikinci postum!", url1, "2")
+    val post1 = Posts("mahmutconger@gmail.com", "06.07.2025", "Bu ilk post ", url1, "1")
+    val post2 = Posts("user@test.com", "06.07.2025", "Bu da ikinci postum!", url1, "2")
     val postList = arrayListOf(post1, post2)
-    val comment5=Comments("bgun daha ne yapacağızz","25.11.2021","as Conger","1","1")
-    val commentList= arrayListOf(comment5)
-    HomeScreen(rememberNavController(),postList, commentList =commentList )
+    val comment5 = Comments("bgun daha ne yapacağızz", "25.11.2021", "as Conger", "1", "1")
+    val commentList = arrayListOf(comment5)
+
+    val homeViewModel: HomeViewModel = viewModel()
+    val commentsViewModel : CommentsViewModel = viewModel()
+
+    HomeScreen(rememberNavController(),homeViewModel,commentsViewModel,postList, commentList = commentList, onPostLikeClicked = {}, onCommentLikeClicked = {})
 }
 
