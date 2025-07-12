@@ -61,7 +61,7 @@ fun AppNavigation() {
                 )
             }
             composable("createPost_screen") {
-                CreatePostScreen(navController)
+                CreatePostScreen(navController )
             }
             composable("profile_screen") {
                 ProfileScreen(navController)
