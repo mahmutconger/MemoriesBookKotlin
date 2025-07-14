@@ -1,229 +1,171 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View
 
 import android.Manifest
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Face
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
-import com.anlarsinsoftware.memoriesbook.R
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UploadUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePostViewModel = viewModel()) {
-    var postDescription by remember { mutableStateOf("") }
     val context = LocalContext.current
 
-    var comment by remember { mutableStateOf("") }
-    var visibility by remember { mutableStateOf("public") } // "public" veya "private"
+    // 1. STATE'LERİ TEMİZLİYORUZ VE BİRLEŞTİRİYORUZ
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var comment by remember { mutableStateOf("") } // Açıklama için SADECE BİR state
+    var visibility by remember { mutableStateOf("public") }
     var visibleToList by remember { mutableStateOf<List<String>>(emptyList()) }
     var showFriendSelector by remember { mutableStateOf(false) }
     val uiState by createPostViewModel.uiState.collectAsState()
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
 
+    // 2. SADECE MODERN PHOTO PICKER LAUNCHER'I KULLANIYORUZ
     val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        uri?.let { imageUri = it }
-    }
+        contract = ActivityResultContracts.PickVisualMedia(),
+        onResult = { uri -> uri?.let { imageUri = it } }
+    )
 
-
-
+    // Yükleme başarılı veya hatalı olduğunda çalışacak ve geri dönecek olan blok
     LaunchedEffect(key1 = uiState) {
-        if (uiState is UploadUiState.Success) {
-            Toast.makeText(context, "Post başarıyla paylaşıldı!", Toast.LENGTH_SHORT).show()
-            navController.popBackStack()
-        } else if (uiState is UploadUiState.Error) {
-            Toast.makeText(context, (uiState as UploadUiState.Error).message, Toast.LENGTH_LONG)
-                .show()
+        when (val state = uiState) {
+            is UploadUiState.Success -> {
+                Toast.makeText(context, "Post başarıyla paylaşıldı!", Toast.LENGTH_SHORT).show()
+                navController.popBackStack()
+            }
+            is UploadUiState.Error -> {
+                Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
+            }
+            else -> {}
         }
     }
 
-    val galleryLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent() // GetContent daha yaygındır
-    ) { uri ->
-        uri?.let { imageUri = it }
-    }
-
-    // İzin isteme sonucunu yakalamak için launcher
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            // İzin verildiyse galeriyi aç
-            galleryLauncher.launch("image/*")
-        } else {
-            // İzin reddedildiyse kullanıcıya bilgi ver
-            Toast.makeText(context, "İzin verilmedi!", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    Scaffold(topBar = {
-        TopAppBar(
-            title = {
-                Text(
-                    "Anı Oluştur",
-                    Modifier.fillMaxWidth(),
-                    fontSize = 21.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center
-                )
-            }, navigationIcon = {
-               // navController.popBackStack()
-            }, actions = {
-                Spacer(modifier = Modifier.width(48.dp))
-            },
-            colors = TopAppBarDefaults.topAppBarColors(
-                containerColor = Color.Transparent
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Anı Oluştur", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri Git")
+                    }
+                },
+                actions = { Spacer(modifier = Modifier.width(48.dp)) } // Başlığı ortalamak için boş bir alan
             )
-        )
-
-
-    }) { innerPadding ->
+        }
+    ) { innerPadding ->
+        // 3. YERLEŞİMİ DÜZELTTİK: Tüm elemanlar artık dikey bir Column içinde, doğru sırada.
         Column(
-            Modifier
+            modifier = Modifier
                 .padding(innerPadding)
+                .padding(16.dp)
                 .fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
-            AsyncImage(
-                model = imageUri,
-                contentDescription = "Seçilen Resim",
+            // --- FOTOĞRAF SEÇME ALANI ---
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(250.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
                     .clickable {
-                        // İzin kontrolü ve galeri açma mantığı
-                        val permissionToRequest =
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                Manifest.permission.READ_MEDIA_IMAGES
-                            } else {
-                                Manifest.permission.READ_EXTERNAL_STORAGE
-                            }
-                        permissionLauncher.launch(permissionToRequest)
+                        // Artık doğrudan modern picker'ı başlatıyoruz, izin isteme işini sistem hallediyor.
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
                     },
-                contentScale = ContentScale.Crop
+                contentAlignment = Alignment.Center
+            ) {
+                if (imageUri == null) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Face, contentDescription = null, modifier = Modifier.size(60.dp))
+                        Text("Resim Seçmek İçin Tıkla")
+                    }
+                } else {
+                    AsyncImage(
+                        model = imageUri,
+                        contentDescription = "Seçilen Resim",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- AÇIKLAMA ALANI ---
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                label = { Text("Açıklama Ekle...") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
             )
 
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // --- GÖRÜNÜRLÜK SEÇENEKLERİ ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = visibility == "public", onClick = { visibility = "public" })
                 Text("Herkese Açık")
                 Spacer(Modifier.width(16.dp))
-                RadioButton(
-                    selected = visibility == "private",
-                    onClick = { visibility = "private" })
-                Text("Özel (Seçili Kişiler)")
+                RadioButton(selected = visibility == "private", onClick = { visibility = "private" })
+                Text("Özel")
             }
-            OutlinedTextField(
-                modifier = Modifier.height(100.dp), value = "",
-                label = {
-                    Text("Açıklama")
-                }, onValueChange = { change ->
-                    postDescription = change
-                })
             if (visibility == "private") {
-                Button(onClick = { showFriendSelector = true }) {
-                    Text("Kişileri Seç (${visibleToList.size} kişi)")
+                OutlinedButton(onClick = { showFriendSelector = true }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Görecek Kişileri Seç (${visibleToList.size})")
                 }
             }
 
-            // Paylaş Butonu
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.weight(1f)) // Paylaş butonunu en alta iter
 
-            Button(onClick = {
-                // Butona tıklandığında izin kontrolü yap
-                // 1. Android sürümüne göre doğru izni belirle
-                val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    Manifest.permission.READ_MEDIA_IMAGES
-                } else {
-                    Manifest.permission.READ_EXTERNAL_STORAGE
-                }
-
-                // 2. İzin verilmiş mi diye kontrol et
-                if (ContextCompat.checkSelfPermission(context, permissionToRequest) == PackageManager.PERMISSION_GRANTED) {
-                    // İzin zaten varsa doğrudan galeriyi aç
-                    galleryLauncher.launch("image/*")
-                } else {
-                    // İzin yoksa kullanıcıdan iste
-                    permissionLauncher.launch(permissionToRequest)
-                }
-            }) {
-                Text("Galeriden Resim Seç")
-            }
-
+            // --- PAYLAŞ BUTONU ---
+            Button(
+                onClick = {
+                    imageUri?.let { uri ->
+                        createPostViewModel.createPost(uri, comment, visibility, visibleToList)
+                    } ?: run {
+                        Toast.makeText(context, "Lütfen bir resim seçin.", Toast.LENGTH_SHORT).show()
+                    }
+                },
+                enabled = uiState !is UploadUiState.Loading,
+                modifier = Modifier.fillMaxWidth().height(50.dp)
+            ) {
                 if (uiState is UploadUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
                 } else {
-                    Text("Paylaş")
+                    Text("Paylaş", fontSize = 16.sp)
                 }
             }
 
-            // `showFriendSelector` true ise BottomSheet ile arkadaş listesini göster
-            if (showFriendSelector) {
-                // ... (Arkadaşların Checkbox ile seçildiği bir ModalBottomSheet kodu)
-            }
-
+            if (showFriendSelector) { /* BottomSheet gösterilir */ }
         }
-
     }
-
-
-
-
+}
