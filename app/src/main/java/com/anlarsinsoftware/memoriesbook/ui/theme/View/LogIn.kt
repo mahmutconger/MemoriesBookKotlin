@@ -16,12 +16,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardColors
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +40,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.R
@@ -46,21 +51,31 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myText
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myTextField
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LogInViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LoginUiState
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.RegistrationUiState
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.auth
 
+
 @Composable
-fun LoginScreen(navController: NavController) {
+fun LoginScreen(navController: NavController,
+                logInViewModel: LogInViewModel= viewModel()
+) {
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) } // Yükleme durumunu göstermek için
 
-    // Google'dan gelen giriş sonucunu yakalamak için Launcher
+
+    // ViewModel'den gelen genel UI durumunu dinliyoruz
+    val uiState by logInViewModel.uiState.collectAsState()
+
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -68,27 +83,35 @@ fun LoginScreen(navController: NavController) {
             val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)!!
-                // Google ID Token'ını alıp Firebase ile giriş yapmaya gönderiyoruz
-                firebaseAuthWithGoogle(account.idToken!!) { success ->
-                    if (success) {
-                        navController.navigate("home_screen") {
-                            popUpTo("login_screen") { inclusive = true }
-                        }
-                    } else {
-                        showToast(context, "Firebase ile kimlik doğrulama başarısız.", true)
-                        isLoading = false
-                    }
+                // Launcher'ın tek görevi token'ı alıp ViewModel'e göndermek.
+                account.idToken?.let { idToken ->
+                    logInViewModel.signInWithGoogle(idToken)
+                } ?: run {
+                    showToast(context, "Google token alınamadı.", true)
                 }
             } catch (e: ApiException) {
-                Log.w("GoogleSignIn", "Google ile giriş başarısız", e)
-                showToast(context, "Google ile giriş başarısız oldu.", true)
-                isLoading = false
+                showToast(context, "Google ile giriş başarısız oldu: ${e.statusCode}", true)
             }
-        } else {
-            isLoading = false
         }
     }
 
+    LaunchedEffect(key1 = uiState) {
+        when (val state = uiState) {
+            is LoginUiState.Success -> {
+                showToast(context, "Giriş başarılı!")
+                navController.navigate("home_screen") {
+                    popUpTo("welcome_screen") { inclusive = true }
+                }
+            }
+
+            is LoginUiState.Error -> {
+                showToast(context, state.message, isLengthLong = true)
+            }
+
+            else -> {}
+        }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -102,14 +125,14 @@ fun LoginScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            var userName by remember { mutableStateOf("") }
+            var userEmail by remember { mutableStateOf("") }
             var password by remember { mutableStateOf("") }
             myTextField(
-                value = userName,
+                value = userEmail,
                 "Kullanıcı Adı",
                 false
             ) { newValue ->
-                userName = newValue
+                userEmail = newValue
             }
 
             mySpacer(16)
@@ -121,16 +144,21 @@ fun LoginScreen(navController: NavController) {
             }
 
             mySpacer(24)
-            myButton(
-                text = "Giriş Yap",
-                false
-            ) {
-                if (userName.isNotEmpty() && password.isNotEmpty()) {
-                    Log.d("LoginAttempt", "Kullanıcı: $userName, Şifre: $password")
-                    navController.navigate("home_screen")
+            Button(onClick = {
+               if (userEmail.isBlank() || password.isBlank()) {
+                    showToast(context, "Tüm alanları doldurunuz.")
                 } else {
-                    Log.d("LoginAttempt", "Alanlar boş bırakılamaz.")
+                    logInViewModel.loginUser(userEmail, password)
                 }
+            }, enabled = uiState !is LoginUiState.Loading )
+            {
+                Text("Kayıt Ol")
+            }
+
+            // Yükleme animasyonunu göster
+            if (uiState is LoginUiState.Loading) {
+                Spacer(Modifier.height(16.dp))
+                CircularProgressIndicator()
             }
 
             mySpacer(100)
@@ -158,7 +186,7 @@ fun LoginScreen(navController: NavController) {
                     ){
                     val context = LocalContext.current
                     myImageButton (id= R.drawable.google_ico, imageSize = 50){
-                        showToast(context,"SA",false)
+                        showToast(context,"Google",false)
                     }
                     Spacer(Modifier.width(20.dp))
                     Text("Google İle Oturum Aç",
@@ -168,7 +196,7 @@ fun LoginScreen(navController: NavController) {
 
             }
             if (isLoading) {
-                // CircularProgressIndicator()
+                 CircularProgressIndicator()
             }
 
         }
