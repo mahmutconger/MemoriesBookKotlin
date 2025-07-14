@@ -31,16 +31,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myText
+import com.google.firebase.auth.FirebaseAuth
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(navController: NavController) {
+    val currentUser = FirebaseAuth.getInstance().currentUser
     val context = LocalContext.current
     Scaffold(
         topBar = {
@@ -100,8 +103,8 @@ fun ProfileScreen(navController: NavController) {
                 .padding(innerPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Image(
-                painter = painterResource(R.drawable.pp),
+            AsyncImage(
+                model = currentUser?.photoUrl,
                 "Profil resmi",
                 modifier = Modifier
                     .size(125.dp)
@@ -109,7 +112,7 @@ fun ProfileScreen(navController: NavController) {
                     .border(2.dp, myBrush(), CircleShape)
             )
             mySpacer(8)
-            myText("Mahmut Çönger", 21, FontWeight.Medium)
+            myText(currentUser?.displayName.toString(), 21, FontWeight.Medium)
 
         }
     }
