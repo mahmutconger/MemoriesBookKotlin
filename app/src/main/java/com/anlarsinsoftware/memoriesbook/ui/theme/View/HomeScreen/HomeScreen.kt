@@ -1,12 +1,9 @@
-import android.content.Context
-import android.graphics.drawable.Icon
 import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -24,7 +21,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -41,15 +37,16 @@ import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MemoriesBookTheme
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.BottomSheetContent
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
+import com.google.firebase.Timestamp
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,8 +88,9 @@ fun HomeScreen(
                 profileClick = {
                     navController.navigate("profile_screen")
                 },messageClick={
-
+                    navController.navigate("messages_screen")
                 },homeClick={
+
                 },homeTint = MaterialTheme.colorScheme.primary
             )
         }
@@ -181,7 +179,7 @@ fun PostItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth()) {
-                Text(text = post.email, fontWeight = FontWeight.Bold)
+                Text(text = post.useremail, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.weight(1f))
                 myImageButton(
                     R.drawable.menu_vertical,
@@ -190,7 +188,12 @@ fun PostItem(
                     tintColor = MaterialTheme.colorScheme.primary
                 )
             }
-            Text(post.date, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
+            val formattedDate = remember(post.date) {
+                val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
+                sdf.format(post.date?.toDate()) // Timestamp'i önce Date'e, sonra String'e çeviriyoruz
+            }
+
+            Text(formattedDate, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
             Spacer(modifier = Modifier.height(8.dp))
             AsyncImage(
                 model = post.downloadUrl,
@@ -232,10 +235,10 @@ fun PostItem(
 @Preview(showBackground = true)
 @Composable
 fun prev_Home() {
-    val post1 = Posts("mahmutconger@gmail.com", "06.07.2025", "Bu ilk post ", url1, "1")
-    val post2 = Posts("user@test.com", "06.07.2025", "Bu da ikinci postum!", url1, "2")
+    val post1 = Posts("mahmutconger@gmail.com", "06.07.2025", "Bu ilk post ", url1, Timestamp.now())
+    val post2 = Posts("user@test.com", "06.07.2025", "Bu da ikinci postum!", url1, Timestamp.now())
     val postList = arrayListOf(post1, post2)
-    val comment5 = Comments("bgun daha ne yapacağızz", "25.11.2021", "as Conger", "1", "1")
+    val comment5 = Comments("bgun daha ne yapacağızz", Timestamp.now(), "as Conger", "1", "1")
     val commentList = arrayListOf(comment5)
 
     val homeViewModel: HomeViewModel = viewModel()
