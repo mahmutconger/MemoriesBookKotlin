@@ -24,7 +24,7 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 @Composable
 fun BottomSheetContent(post: Posts, onHide: () -> Unit) {
     Column(modifier = Modifier.padding(16.dp)) {
-        Text("Post Seçenekleri: ${post.email}", style = MaterialTheme.typography.titleLarge)
+        Text("Post Seçenekleri: ${post.useremail}", style = MaterialTheme.typography.titleLarge)
         BottomSheetItem(icon = Icons.Default.Edit, text = "Postu Düzenle") {
             Log.d("BottomSheet", "Düzenle tıklandı: ${post.comment}")
             onHide()

@@ -1,6 +1,18 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.Model
 
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.PropertyName
 
-data class Posts(var email: String,var date:String ,var comment: String, var downloadUrl: String, var documentId: String,var isLiked: Boolean = false){
 
-}
+data class Posts(
+    val authorId: String = "",
+    val useremail: String = "",
+    val comment: String = "",
+    @get:PropertyName("downloadurl") @set:PropertyName("downloadurl")
+    var downloadUrl: String = "",
+    val date: Timestamp? = null,
+    val visibility: String = "public",
+    val visibleTo: List<String> = emptyList(),
+    var isLiked: Boolean = false,
+    var documentId: String = "" // documentId için de varsayılan değer eklemek iyidir.
+)
