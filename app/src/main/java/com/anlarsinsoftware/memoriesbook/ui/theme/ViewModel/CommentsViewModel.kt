@@ -1,17 +1,8 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
-import android.graphics.Color
-import android.graphics.Typeface
-import android.text.Spannable
-import android.text.SpannableString
-import android.text.style.ForegroundColorSpan
-import android.text.style.StyleSpan
 import android.util.Log
-import android.widget.Toast
-import androidx.datastore.dataStore
 import androidx.lifecycle.ViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.EventListener
 import com.google.firebase.firestore.FirebaseFirestore
@@ -52,7 +43,7 @@ class CommentsViewModel: ViewModel(){
 
                        Comments(
                            comment = data?.get("comment") as? String ?: "",
-                           date = date,
+                           date = data?.get("timestamp") as? Timestamp ?: Timestamp.now() ,
                            user = data?.get("email") as? String ?: "",
                            documentId = snapshot.id,
                            postId = postId,
