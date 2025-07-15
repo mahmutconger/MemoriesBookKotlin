@@ -15,6 +15,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
+        multiDexEnabled = true
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,8 +70,18 @@ dependencies {
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
 
-// Firebase ve Google Play servislerini Coroutine'lerle kullanmak için
+    //Firebase ve Google Play servislerini Coroutine'lerle kullanmak için
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 
+    //Retrofit
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+
+    implementation("androidx.multidex:multidex:2.0.1")
 }
