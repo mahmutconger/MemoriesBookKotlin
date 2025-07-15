@@ -14,21 +14,27 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -42,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.navigation.NavController
 import com.anlarsinsoftware.memoriesbook.R
 
 @Composable
@@ -88,13 +95,13 @@ fun mySpacer(height: Int) {
 
 
 @Composable
-fun myButton(text: String, isOutLined: Boolean, onClick: () -> Unit) {
+fun myButton(text: String, isOutLined: Boolean,enabled: Boolean=true ,onClick: () -> Unit) {
     if (isOutLined) {
-        ElevatedButton(onClick) {
+        ElevatedButton(onClick, enabled = enabled) {
             Text(text)
         }
     } else {
-        Button(onClick) {
+        Button(onClick, enabled = enabled) {
             Text(text)
         }
     }
@@ -158,7 +165,7 @@ fun myIconButton(
     tintColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(onClick = onClick as () -> Unit) {
         Icon(
             imageVector = imageVector,
             contentDescription = "Action Icon",
@@ -228,4 +235,69 @@ fun BottomNavigationBar(
             messageClick()
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyScaffold(
+    titleText: String,
+    navController: NavController,
+    context: Context,
+    navRoute: String ="",
+    content: @Composable () -> Unit
+) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                // 1. Başlık bölümü. Ortalanması için Modifier ekliyoruz.
+                title = {
+                    Text(
+                        titleText,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                // 2. Navigasyon ikonu (soldaki ikon).
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            tint = MaterialTheme.colorScheme.primary,
+                            contentDescription = "Geri Butonu"
+                        )
+                    }
+                },
+
+                actions = {
+                    IconButton(onClick = { navController.navigate(navRoute) }) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            tint = MaterialTheme.colorScheme.primary,
+                            contentDescription = "Seçenekler Menüsü"
+                        )
+                    }
+                },
+
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }, bottomBar = {
+            BottomNavigationBar(
+                context = context,
+                createPostClick = {
+                    navController.navigate("createPost_screen")
+                }, profileClick = {
+                    navController.navigate("profile_screen")
+                }, messageClick = {
+                    navController.navigate("messages_screen")
+                }, homeClick = {
+                    navController.navigate("home_screen")
+                })
+        }
+    ) {innerPadding->
+        Column (modifier = Modifier.padding(innerPadding)
+            .fillMaxSize()){ content(/*TODO BURADA COLMN / ROW TANIMLAMAK DAHA KULLANIŞLI HALE GETİRECEKTİR.*/) }}
 }
