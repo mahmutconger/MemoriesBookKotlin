@@ -12,11 +12,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MemoriesBookTheme
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.MessagesScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.LoginScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.RegisterScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.WellComeScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ChatDetailScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ConnectionsScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen.SettingsScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ThemeDataStore
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
 import kotlinx.coroutines.launch
 
@@ -72,6 +76,18 @@ fun AppNavigation() {
                     isDarkMode = isDarkMode,
                     onThemeToggle = toggleTheme
                 )
+            }
+            composable("messages_screen"){
+                MessagesScreen(navController)
+            }
+            composable("connections_screen"){
+                ConnectionsScreen(navController)
+            }
+            composable("chat_screen/{friendId}") { backStackEntry ->
+                val friendId = backStackEntry.arguments?.getString("friendId")
+                if (friendId != null) {
+                    ChatDetailScreen(navController, friendId = friendId)
+                }
             }
         }
     }
