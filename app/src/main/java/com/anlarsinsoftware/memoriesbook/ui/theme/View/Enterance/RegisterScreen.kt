@@ -1,7 +1,5 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.View
+package com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance
 
-import android.content.Context
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,16 +36,12 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myTextField
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.RegisterViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.RegistrationUiState
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
 
 @Composable
 fun RegisterScreen(

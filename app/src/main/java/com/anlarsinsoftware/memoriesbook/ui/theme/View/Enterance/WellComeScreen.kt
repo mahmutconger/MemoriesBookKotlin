@@ -1,6 +1,5 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.View
+package com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -49,15 +48,13 @@ fun WellComeScreen(modifier: Modifier = Modifier, navController: NavController) 
             mySpacer(10)
             myButton("Giriş Yap", true) {
                 navController.navigate("login_screen")
-                deger.value = "evet"
-                Log.d("btnTag", "Giriş Yap butonuna basıldı.")
             }
             mySpacer(10)
             myText("Hayır mı?", 16, FontWeight.Bold, Color.White)
             mySpacer(10)
             myButton("Kayıt Ol", false) {
                 navController.navigate("register_screen")
-                Log.d("btnTag", "Kayıt Ol butonuna basıldı.")
+
             }
         }
     }
