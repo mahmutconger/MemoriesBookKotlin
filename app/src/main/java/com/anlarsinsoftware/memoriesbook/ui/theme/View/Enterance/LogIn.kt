@@ -60,7 +60,6 @@ fun LoginScreen(navController: NavController,
 ) {
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var isLoading by remember { mutableStateOf(false) } // Yükleme durumunu göstermek için
 
 
@@ -143,7 +142,7 @@ fun LoginScreen(navController: NavController,
                 }
             }, enabled = uiState !is LoginUiState.Loading )
             {
-                Text("Kayıt Ol")
+                Text("Giriş yap")
             }
 
             // Yükleme animasyonunu göster
@@ -186,10 +185,6 @@ fun LoginScreen(navController: NavController,
                 }
 
             }
-            if (isLoading) {
-                 CircularProgressIndicator()
-            }
-
         }
     }
 }
