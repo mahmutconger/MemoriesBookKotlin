@@ -1,12 +1,10 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
-import android.net.Uri
-import com.anlarsinsoftware.memoriesbook.R
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.userProfileChangeRequest
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,34 +22,46 @@ sealed interface RegistrationUiState {
 
 class RegisterViewModel : ViewModel() {
     private val auth = Firebase.auth
+    private val firestore = Firebase.firestore
 
     private val _uiState = MutableStateFlow<RegistrationUiState>(RegistrationUiState.Idle)
     val uiState: StateFlow<RegistrationUiState> = _uiState.asStateFlow()
 
-    fun registerUser(email: String, password: String,userName: String) {
-        viewModelScope.launch {
-            _uiState.value = RegistrationUiState.Loading // 1. Yükleme durumunu başlat
-            try {
-                // 2. Firebase işlemini Coroutine ile bekle
-                val result = auth.createUserWithEmailAndPassword(email, password).await()
 
+    fun registerUser(email: String, password: String, userName: String) {
+        viewModelScope.launch {
+            _uiState.value = RegistrationUiState.Loading
+            try {
+                // 1. Kullanıcı Auth'ta oluşturuluyor
+                val result = auth.createUserWithEmailAndPassword(email, password).await()
                 val user = result.user
+
                 if (user != null) {
-                    // 3. Profil güncelleme isteği oluşturuyoruz.
+                    // 2. Kullanıcının görünen adı Auth'ta güncelleniyor
                     val profileUpdates = userProfileChangeRequest {
                         displayName = userName
                     }
-
-                    // 4. İsteği Firebase'e gönderip işlemin bitmesini bekliyoruz.
                     user.updateProfile(profileUpdates).await()
+
+                    val userMap = hashMapOf(
+                        "uid" to user.uid,
+                        "username" to userName,
+                        "email" to email,
+                        "photoUrl" to "", // Başlangıçta profil fotoğrafı boş
+                        "following" to emptyList<String>(), // Başlangıçta takip listeleri boş
+                        "followers" to emptyList<String>(),
+                        "friends" to emptyList<String>()
+                    )
+
+                    // 4. 'Users' koleksiyonuna, kullanıcının UID'sini döküman ID'si olarak kullanarak veriyi kaydediyoruz.
+                    firestore.collection("Users").document(user.uid).set(userMap).await()
+                    // --- YENİ KISIM SONU ---
                 }
-                // 3. İşlem başarılıysa durumu güncelle
+
+                // 5. Tüm işlemler başarılıysa durumu güncelle
                 _uiState.value = RegistrationUiState.Success
 
-                // İsteğe bağlı: Kullanıcı bilgilerini (kullanıcı adı vb.) Firestore'a burada kaydedebilirsin.
-
             } catch (e: Exception) {
-                // 4. Hata olursa durumu ve hata mesajını güncelle
                 _uiState.value = RegistrationUiState.Error(e.localizedMessage ?: "Bilinmeyen bir hata oluştu.")
             }
         }
