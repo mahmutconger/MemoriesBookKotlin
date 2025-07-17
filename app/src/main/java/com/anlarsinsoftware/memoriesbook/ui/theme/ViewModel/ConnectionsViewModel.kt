@@ -4,10 +4,16 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Followers
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Following
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendRequest
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.PendingRequest
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.SearchResultUser
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.FlowPreview
@@ -20,19 +26,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-// Arayüzde gösterilecek kullanıcı modeli
-data class SearchResultUser(
-    val uid: String = "",
-    val username: String = "",
-    val email: String = ""
-    // İsteğe bağlı olarak requestStatus: "sent", "friends", "none" gibi bir alan eklenebilir
-)
 
-data class Connections(
-    val uid: String = "",
-    val username: String = "",
-    val email: String = ""
-)
+
 
 @OptIn(FlowPreview::class)
 class ConnectionsViewModel : ViewModel() {
@@ -45,12 +40,17 @@ class ConnectionsViewModel : ViewModel() {
     private val _searchResults = MutableStateFlow<List<SearchResultUser>>(emptyList())
     val searchResults: StateFlow<List<SearchResultUser>> = _searchResults.asStateFlow()
 
-    private val _connections=MutableStateFlow<List<Connections>>(emptyList())
-    val connections: StateFlow<List<Connections>> = _connections.asStateFlow()
+    private val _followers = MutableStateFlow<List<Followers>>(emptyList())
+    val followers: StateFlow<List<Followers>> = _followers.asStateFlow()
+
+    private val _following = MutableStateFlow<List<Following>>(emptyList())
+    val following: StateFlow<List<Following>> = _following.asStateFlow()
+
+    private val _pendingRequests = MutableStateFlow<List<PendingRequest>>(emptyList())
+    val pendingRequests: StateFlow<List<PendingRequest>> = _pendingRequests.asStateFlow()
+
 
     init {
-        // Arama sorgusu her değiştiğinde (ama kullanıcı yazmayı bıraktıktan 300ms sonra)
-        // veritabanında arama yap. Bu, her tuş basışında sorgu yapmayı engeller.
         searchQuery
             .debounce(300L)
             .onEach { query ->
@@ -64,6 +64,7 @@ class ConnectionsViewModel : ViewModel() {
 
         fetchFollowers()
         fetchFollowing()
+        fetchFriendRequests()
     }
 
     private fun searchUsers(query: String) {
@@ -81,6 +82,7 @@ class ConnectionsViewModel : ViewModel() {
                 // Hata yönetimi
             }
     }
+
     fun fetchFollowers() {
         val currentUser = auth.currentUser ?: return
 
@@ -91,7 +93,7 @@ class ConnectionsViewModel : ViewModel() {
                 val followerUids = userDoc.get("followers") as? List<String> ?: emptyList()
 
                 if (followerUids.isEmpty()) {
-                    _connections.value = emptyList() // Takipçi yoksa listeyi boşalt
+                    _followers.value = emptyList()
                     return@launch
                 }
 
@@ -101,11 +103,11 @@ class ConnectionsViewModel : ViewModel() {
                     .get().await()
 
                 // `Followers` data class'ına dönüştür
-                _connections.value = followersQuery.toObjects(Connections::class.java)
+                _followers.value = followersQuery.toObjects(Followers::class.java)
 
             } catch (e: Exception) {
                 // Hata yönetimi
-                Log.e("FollowerFetch", "Error fetching followers", e)
+                Log.e("ConnectionsLOG", "Error fetching followers", e)
             }
         }
     }
@@ -117,30 +119,78 @@ class ConnectionsViewModel : ViewModel() {
             try {
                 // 1. Adım: Mevcut kullanıcının dökümanından 'followers' dizisini (UID listesini) al.
                 val userDoc = firestore.collection("Users").document(currentUser.uid).get().await()
-                val followerUids = userDoc.get("following") as? List<String> ?: emptyList()
+                val followingUids = userDoc.get("following") as? List<String> ?: emptyList()
 
-                if (followerUids.isEmpty()) {
-                    _connections.value = emptyList() // Takipçi yoksa listeyi boşalt
+                if (followingUids.isEmpty()) {
+                    _following.value = emptyList() // Takipçi yoksa listeyi boşalt
                     return@launch
                 }
 
                 // 2. Adım: Bu UID listesini kullanarak 'Users' koleksiyonundan takipçilerin profillerini çek.
                 val followersQuery = firestore.collection("Users")
-                    .whereIn(FieldPath.documentId(), followerUids)
+                    .whereIn(FieldPath.documentId(), followingUids)
                     .get().await()
 
                 // `Followers` data class'ına dönüştür
-                _connections.value = followersQuery.toObjects(Connections::class.java)
+                _following.value = followersQuery.toObjects(Following::class.java)
 
             } catch (e: Exception) {
                 // Hata yönetimi
-                Log.e("FollowerFetch", "Error fetching followers", e)
+                Log.e("ConnectionsLOG", "Error fetching followers", e)
+            }
+        }
+    }
+
+    fun fetchFriendRequests() {
+        val currentUser = auth.currentUser ?: return
+
+        viewModelScope.launch {
+            try {
+                // 1. ADIM: Sana gelen ve durumu "pending" olan istekleri çek
+                val requestsQuery = firestore.collection("friend_requests")
+                    .whereEqualTo("receiverId", currentUser.uid)
+                    .whereEqualTo("status", "pending")
+                    .get().await()
+
+                val requests = requestsQuery.documents.mapNotNull { doc ->
+                    doc.toObject(FriendRequest::class.java)?.copy(documentId = doc.id) // documentId'yi de alalım
+                }
+
+                if (requests.isEmpty()) {
+                    _pendingRequests.value = emptyList()
+                    return@launch
+                }
+
+                // 2. ADIM: İstek gönderenlerin ID'lerini bir liste yap
+                val senderIds = requests.map { it.senderId }.distinct()
+
+                // 3. ADIM: Bu ID'lerle kullanıcıların profil bilgilerini çek
+                val sendersQuery = firestore.collection("Users")
+                    .whereIn(FieldPath.documentId(), senderIds)
+                    .get().await()
+
+                val senderProfiles = sendersQuery.toObjects(SearchResultUser::class.java)
+
+                // 4. ADIM: İki bilgiyi birleştirerek UI için son listeyi oluştur
+                val pendingRequestList = requests.mapNotNull { request ->
+                    val senderInfo = senderProfiles.find { it.uid == request.senderId }
+                    if (senderInfo != null) {
+                        PendingRequest(requestId = request.documentId, senderProfile = senderInfo)
+                    } else {
+                        null
+                    }
+                }
+
+                _pendingRequests.value = pendingRequestList
+
+            } catch (e: Exception) {
+                Log.e("FriendRequestFetch", "Error fetching friend requests", e)
             }
         }
     }
 
 
-    fun sendFriendRequest(receiverId: String,context : Context) {
+    fun sendFriendRequest(receiverId: String, context: Context) {
         val senderId = auth.currentUser?.uid ?: return
 
         val request = hashMapOf(
@@ -151,10 +201,37 @@ class ConnectionsViewModel : ViewModel() {
 
         firestore.collection("friend_requests").add(request)
             .addOnSuccessListener {
-                showToast(context,"İstek başarıyla gönderildi")
+                showToast(context, "İstek başarıyla gönderildi")
             }
             .addOnFailureListener {
-                // Hata yönetimi
+                showToast(context, "İstek gönderilemedi")
+            }
+    }
+
+    fun acceptFriendRequest(request: PendingRequest) {
+        val currentUser = auth.currentUser ?: return
+
+        val batch = firestore.batch()
+
+        val requestRef = firestore.collection("friend_requests").document(request.requestId)
+        batch.update(requestRef, "status", "accepted")
+
+        val myRef = firestore.collection("Users").document(currentUser.uid)
+        batch.update(myRef, "friends", FieldValue.arrayUnion(request.senderProfile.uid))
+
+        val senderRef = firestore.collection("Users").document(request.senderProfile.uid)
+        batch.update(senderRef, "friends", FieldValue.arrayUnion(currentUser.uid))
+
+        batch.commit().addOnSuccessListener {
+            fetchFriendRequests()
+            fetchFollowers()
+        }
+    }
+
+    fun declineFriendRequest(requestId: String) {
+        firestore.collection("friend_requests").document(requestId).delete()
+            .addOnSuccessListener {
+                fetchFriendRequests()
             }
     }
 }
