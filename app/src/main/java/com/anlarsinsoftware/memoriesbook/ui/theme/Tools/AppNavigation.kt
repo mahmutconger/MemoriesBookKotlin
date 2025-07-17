@@ -20,6 +20,8 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.WellComeScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ChatDetailScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ConnectionsScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen.SettingsScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModelFactory
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
 import kotlinx.coroutines.launch
@@ -35,6 +37,8 @@ fun AppNavigation() {
             themeDataStore.setTheme(!isDarkMode)
         }
     }
+    val homeViewModel: HomeViewModel = viewModel()
+    val commentsViewModel: CommentsViewModel = viewModel()
     MemoriesBookTheme(darkTheme = isDarkMode) {
         val navController = rememberNavController()
         NavHost(navController = navController, startDestination = "welcome_screen") {
@@ -49,8 +53,6 @@ fun AppNavigation() {
             }
             composable("home_screen") {
 
-                val homeViewModel: HomeViewModel = viewModel()
-                val commentsViewModel: CommentsViewModel = viewModel()
                 val posts by homeViewModel.posts.collectAsState()
                 val comments by commentsViewModel.comments.collectAsState()
 
@@ -85,9 +87,19 @@ fun AppNavigation() {
             }
             composable("chat_screen/{friendId}") { backStackEntry ->
                 val friendId = backStackEntry.arguments?.getString("friendId")
-                if (friendId != null) {
-                    ChatDetailScreen(navController, friendId = friendId)
-                }
+
+                // ChatDetailViewModel'i burada, Factory kullanarak ve homeViewModel'i vererek oluşturuyoruz.
+                val chatDetailViewModel: ChatDetailViewModel = viewModel(
+                    factory = ChatDetailViewModelFactory(
+                        friendId = friendId ?: "",
+                        homeViewModel = homeViewModel
+                    )
+                )
+
+                ChatDetailScreen(
+                    navController = navController,
+                    chatDetailViewModel = chatDetailViewModel
+                )
             }
         }
     }
