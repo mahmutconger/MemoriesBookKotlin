@@ -72,6 +72,8 @@ dependencies {
     implementation("com.google.firebase:firebase-storage")
     implementation("com.google.firebase:firebase-functions-ktx")
     implementation("com.google.firebase:firebase-messaging-ktx")
+    // Firebase Realtime Database
+    implementation("com.google.firebase:firebase-database-ktx")
 
     //Firebase ve Google Play servislerini Coroutine'lerle kullanmak için
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.0")
