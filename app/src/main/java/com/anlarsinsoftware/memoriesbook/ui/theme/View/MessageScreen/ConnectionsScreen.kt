@@ -29,11 +29,12 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.SearchResultUser
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.Followers
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.SearchResultUser
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun ConnectionsScreen(
 ) {
     val searchQuery by connectionsViewModel.searchQuery.collectAsState()
     val searchResults by connectionsViewModel.searchResults.collectAsState()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -71,7 +73,7 @@ fun ConnectionsScreen(
                     onAddFriendClicked = {
                         connectionsViewModel.sendFriendRequest(
                             user.uid,
-                            context = TODO()
+                            context = context
                         )
                     }
                 )
@@ -98,20 +100,7 @@ fun UserItem(user: SearchResultUser, onAddFriendClicked: () -> Unit) {
     }
 }
 
-@Composable
-fun UserItemForFollowers(user: Followers) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(user.username, fontWeight = FontWeight.Bold)
-                Text(user.email, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-}
+
 
 
 @Preview(showBackground = true)
