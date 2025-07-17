@@ -3,12 +3,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.AppNavigation
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MemoriesBookTheme
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 
 class MainActivity : ComponentActivity() {
-    private val postList=ArrayList<Posts>()
+
+    private val homeViewModel: HomeViewModel by viewModels()
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -19,6 +23,16 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+    override fun onResume() {
+        super.onResume()
+        homeViewModel.setUserOnline()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        homeViewModel.setUserOffline()
+    }
+
 }
 
 
