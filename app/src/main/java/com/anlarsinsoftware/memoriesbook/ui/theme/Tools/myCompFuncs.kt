@@ -21,12 +21,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -50,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.anlarsinsoftware.memoriesbook.R
+import com.google.common.io.Resources
+import kotlinx.coroutines.launch
 
 @Composable
 fun myBrush(): Brush {
@@ -95,7 +99,7 @@ fun mySpacer(height: Int) {
 
 
 @Composable
-fun myButton(text: String, isOutLined: Boolean,enabled: Boolean=true ,onClick: () -> Unit) {
+fun myButton(text: String, isOutLined: Boolean, enabled: Boolean = true, onClick: () -> Unit) {
     if (isOutLined) {
         ElevatedButton(onClick, enabled = enabled) {
             Text(text)
@@ -164,10 +168,25 @@ fun myIconButton(
     imageSize: Int = 30,
     tintColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
+) = IconButton(onClick = onClick) {
+    Icon(
+        imageVector = imageVector,
+        contentDescription = "Action Icon",
+        modifier = Modifier.size(imageSize.dp),
+        tint = tintColor
+    )
+}
+
+@Composable
+fun myIconButtonPainter(
+    resourcesId: Int,
+    imageSize: Int = 30,
+    tintColor: Color = MaterialTheme.colorScheme.primary,
+    onClick: () -> Unit
 ) {
-    IconButton(onClick = onClick as () -> Unit) {
+    IconButton(onClick = onClick) {
         Icon(
-            imageVector = imageVector,
+            painter = painterResource(resourcesId),
             contentDescription = "Action Icon",
             modifier = Modifier.size(imageSize.dp),
             tint = tintColor
@@ -193,7 +212,7 @@ fun BottomNavigationBar(
     profileClick: () -> Unit,
     homeClick: () -> Unit,
     messageClick: () -> Unit,
-    homeTint:Color=MaterialTheme.colorScheme.primary,
+    homeTint: Color = MaterialTheme.colorScheme.primary,
     bgColorProfile: Color = Color.Transparent,
     bgColorCreatePost: Color = Color.Transparent,
     bgColorMessage: Color = Color.Transparent,
@@ -221,7 +240,8 @@ fun BottomNavigationBar(
         ) {
             profileClick()
         }
-        myImageButton(id = R.drawable.add_post,
+        myImageButton(
+            id = R.drawable.add_post,
             tintColor = MaterialTheme.colorScheme.primary,
             bgColor = bgColorCreatePost
         ) {
@@ -239,17 +259,72 @@ fun BottomNavigationBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun ProfileScaffold(
+    navController: NavController,
+    context: Context,
+    onClickNotify: () -> Unit,
+    content: @Composable () -> Unit
+) {
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { },
+
+                navigationIcon = {
+                    myIconButtonPainter(R.drawable.add_user) {
+                        navController.navigate("connections_screen")
+                    }
+                },
+                actions = {
+                    myIconButton(Icons.Default.Notifications) {
+                        onClickNotify()
+                    }
+                    myIconButtonPainter(R.drawable.memories) {
+                        // Tıklama olayı
+                    }
+                    myIconButton(Icons.Default.Settings) {
+                        navController.navigate("settings_screen")
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }, bottomBar = {
+            BottomNavigationBar(
+                context = context,
+                createPostClick = {
+                    navController.navigate("createPost_screen")
+                }, profileClick = {
+                    navController.navigate("profile_screen")
+                }, messageClick = {
+                    navController.navigate("messages_screen")
+                }, homeClick = {
+                    navController.navigate("home_screen")
+                })
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) { content(/*TODO BURADA COLMN / ROW TANIMLAMAK DAHA KULLANIŞLI HALE GETİRECEKTİR.*/) }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun MyScaffold(
     titleText: String,
     navController: NavController,
     context: Context,
-    navRoute: String ="",
+    navRoute: String = "",
     content: @Composable () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                // 1. Başlık bölümü. Ortalanması için Modifier ekliyoruz.
                 title = {
                     Text(
                         titleText,
@@ -297,7 +372,11 @@ fun MyScaffold(
                     navController.navigate("home_screen")
                 })
         }
-    ) {innerPadding->
-        Column (modifier = Modifier.padding(innerPadding)
-            .fillMaxSize()){ content(/*TODO BURADA COLMN / ROW TANIMLAMAK DAHA KULLANIŞLI HALE GETİRECEKTİR.*/) }}
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) { content(/*TODO BURADA COLMN / ROW TANIMLAMAK DAHA KULLANIŞLI HALE GETİRECEKTİR.*/) }
+    }
 }
