@@ -1,6 +1,5 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen
 
-import FriendProfile
 import MessagesViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +45,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.ktx.functions
@@ -60,7 +60,6 @@ fun MessagesScreen(navController: NavController,
                    messagesViewModel: MessagesViewModel = viewModel()) {
     functions = Firebase.functions
     val context = LocalContext.current
-    val textvalue = remember { mutableStateOf("Belirsiz") }
     val friends by messagesViewModel.friends.collectAsState()
 
     Scaffold(

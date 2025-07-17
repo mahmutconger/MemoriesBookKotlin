@@ -1,6 +1,7 @@
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.ktx.firestore
@@ -11,11 +12,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-data class FriendProfile(
-    val uid: String = "",
-    val username: String = "",
-    val photoUrl: String = ""
-)
+
+
 
 class MessagesViewModel : ViewModel() {
     private val firestore = Firebase.firestore
@@ -25,44 +23,42 @@ class MessagesViewModel : ViewModel() {
     val friends: StateFlow<List<FriendProfile>> = _friends.asStateFlow()
 
     init {
-        fetchFriendsWithIntersection()
+        fetchFriends()
     }
 
-    private fun fetchFriendsWithIntersection() {
+    private fun fetchFriends() {
         viewModelScope.launch {
             val currentUser = auth.currentUser
             if (currentUser == null) {
                 Log.e("FriendFetch", "HATA: Mevcut kullanıcı null, işlem durduruldu.")
+                _friends.value = emptyList()
                 return@launch
             }
             Log.d("FriendFetch", "1. Adım: Mevcut kullanıcı bulundu. UID: ${currentUser.uid}")
 
             try {
+                // 2. Adım: Mevcut kullanıcının dökümanını oku.
                 val userDoc = firestore.collection("Users").document(currentUser.uid).get().await()
 
                 if (!userDoc.exists()) {
                     Log.e("FriendFetch", "HATA: Kullanıcının dökümanı 'Users' koleksiyonunda bulunamadı!")
                     return@launch
                 }
-                Log.d("FriendFetch", "2. Adım: Kullanıcı dökümanı başarıyla çekildi.")
 
-                val followers = userDoc.get("followers") as? List<String> ?: emptyList()
-                val following = userDoc.get("following") as? List<String> ?: emptyList()
-                Log.d("FriendFetch", "3. Adım: Takipçi sayısı: ${followers.size}, Takip edilen sayısı: ${following.size}")
+                // 3. Adım: Doğrudan 'friends' dizisini al.
+                val friendUids = userDoc.get("friends") as? List<String> ?: emptyList()
 
-                val friendUids = followers.intersect(following.toSet()).toList()
                 if (friendUids.isEmpty()) {
-                    Log.w("FriendFetch", "UYARI: Takipçi ve takip edilen listelerinin kesişimi boş. Hiç ortak arkadaş bulunamadı.")
+                    Log.i("FriendFetch", "Kullanıcının hiç arkadaşı yok.")
                     _friends.value = emptyList()
                     return@launch
                 }
-                Log.d("FriendFetch", "4. Adım: Kesişim bulundu. Arkadaş UID'leri: $friendUids")
+                Log.d("FriendFetch", "4. Adım: Arkadaş listesi bulundu. Arkadaş UID'leri: $friendUids")
 
+                // 5. Adım: Bu UID'lerle kullanıcı profillerini tek bir sorguda çek.
                 val friendsQuery = firestore.collection("Users")
                     .whereIn(FieldPath.documentId(), friendUids)
                     .get().await()
-
-                Log.d("FriendFetch", "5. Adım: Arkadaş profilleri sorgulandı. Bulunan döküman sayısı: ${friendsQuery.size()}")
 
                 val friendObjects = friendsQuery.toObjects(FriendProfile::class.java)
                 _friends.value = friendObjects
@@ -70,6 +66,7 @@ class MessagesViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 Log.e("FriendFetch", "!!! HATA: İşlem sırasında bir exception oluştu: ${e.message}", e)
+                _friends.value = emptyList()
             }
         }
     }
