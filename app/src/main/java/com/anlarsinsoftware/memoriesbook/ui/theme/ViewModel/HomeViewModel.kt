@@ -4,7 +4,13 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ServerValue
+import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ktx.database
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -22,6 +28,8 @@ import kotlinx.coroutines.launch
 class HomeViewModel : ViewModel() {
     private val auth = Firebase.auth
     private val firestore = Firebase.firestore
+    private val database = Firebase.database.reference
+
 
     private val _posts = MutableStateFlow<List<Posts>>(emptyList())
     val posts: StateFlow<List<Posts>> = _posts.asStateFlow()
@@ -128,6 +136,43 @@ class HomeViewModel : ViewModel() {
             .addOnFailureListener { e ->
                 Log.e("Firestore", "Error updating post like status.", e)
             }
+    }
+
+    fun setUserOnline() {
+        val uid = auth.currentUser?.uid ?: return
+        val userStatusRef = database.child("status").child(uid)
+
+        // Kullanıcının online olduğunu ve son görülme zamanını yaz
+        userStatusRef.child("isOnline").setValue(true)
+        userStatusRef.child("last_seen").setValue(ServerValue.TIMESTAMP)
+
+        // Bağlantı koptuğunda ne olacağını sunucuya bildir
+        userStatusRef.child("isOnline").onDisconnect().setValue(false)
+        userStatusRef.child("last_seen").onDisconnect().setValue(ServerValue.TIMESTAMP)
+    }
+
+    // Kullanıcı manuel olarak çıkış yaptığında bu fonksiyon çağrılabilir
+    fun setUserOffline() {
+        val uid = auth.currentUser?.uid ?: return
+        database.child("status").child(uid).child("isOnline").setValue(false)
+        database.child("status").child(uid).child("last_seen").setValue(ServerValue.TIMESTAMP)
+    }
+
+    // Bir arkadaşın durumunu canlı dinlemek için (ChatDetailViewModel'e konulabilir)
+    fun observeUserStatus(friendId: String): Flow<UserStatus> = callbackFlow {
+        val ref = database.child("status").child(friendId)
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val isOnline = snapshot.child("isOnline").getValue(Boolean::class.java) ?: false
+                val lastSeen = snapshot.child("last_seen").getValue(Long::class.java)
+                trySend(UserStatus(isOnline, lastSeen))
+            }
+            override fun onCancelled(error: DatabaseError) {
+                close(error.toException())
+            }
+        }
+        ref.addValueEventListener(listener)
+        awaitClose { ref.removeEventListener(listener) } // Dinleyiciyi kaldır
     }
 
 
