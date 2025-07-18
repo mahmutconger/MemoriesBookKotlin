@@ -13,7 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.MessagesScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.CreatePostScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.LoginScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.RegisterScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.WellComeScreen
@@ -24,6 +24,8 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModelFactory
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -39,6 +41,8 @@ fun AppNavigation() {
     }
     val homeViewModel: HomeViewModel = viewModel()
     val commentsViewModel: CommentsViewModel = viewModel()
+    val createPostViewModel: CreatePostViewModel = viewModel()
+    val connectionsViewModel: ConnectionsViewModel = viewModel()
     MemoriesBookTheme(darkTheme = isDarkMode) {
         val navController = rememberNavController()
         NavHost(navController = navController, startDestination = "welcome_screen") {
@@ -63,11 +67,16 @@ fun AppNavigation() {
                     onPostLikeClicked = homeViewModel::onPostLikeClicked,
                     onCommentLikeClicked = commentsViewModel::onCommentLikeClicked,
                     homeViewModel = homeViewModel,
-                    commentsViewModel =  commentsViewModel
+                    commentsViewModel = commentsViewModel,
+                    connectionsViewModel = connectionsViewModel
                 )
             }
             composable("createPost_screen") {
-                CreatePostScreen(navController )
+                CreatePostScreen(
+                    navController,
+                    createPostViewModel = createPostViewModel,
+                    connectionsViewModel = connectionsViewModel
+                )
             }
             composable("profile_screen") {
                 ProfileScreen(navController)
@@ -79,10 +88,10 @@ fun AppNavigation() {
                     onThemeToggle = toggleTheme
                 )
             }
-            composable("messages_screen"){
+            composable("messages_screen") {
                 MessagesScreen(navController)
             }
-            composable("connections_screen"){
+            composable("connections_screen") {
                 ConnectionsScreen(navController)
             }
             composable("chat_screen/{friendId}") { backStackEntry ->
