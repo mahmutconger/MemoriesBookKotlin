@@ -4,6 +4,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -13,9 +14,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,11 +42,17 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.FriendSelectorBottomSheet
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.BottomSheetContent
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.EditPostBottomSheet
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
+import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -54,6 +63,7 @@ fun HomeScreen(
     navController: NavController,
     homeViewModel: HomeViewModel,
     commentsViewModel: CommentsViewModel,
+    connectionsViewModel: ConnectionsViewModel,
     postList: List<Posts>,
     commentList: List<Comments>,
     onPostLikeClicked: (Posts) -> Unit,
@@ -64,6 +74,15 @@ fun HomeScreen(
     val commentSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     var selectedPost by remember { mutableStateOf<Posts?>(null) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    val editPostSheetState = rememberModalBottomSheetState()
+    var showEditPostSheet by remember { mutableStateOf(false) }
+    val friends by connectionsViewModel.friends.collectAsState()
+    val followers by connectionsViewModel.followers.collectAsState()
+    var showVisibilitySheet by remember { mutableStateOf(false) }
+
+
+    val currentUser = FirebaseAuth.getInstance().currentUser
 
     Scaffold(
         topBar = {
@@ -87,11 +106,11 @@ fun HomeScreen(
                 },
                 profileClick = {
                     navController.navigate("profile_screen")
-                },messageClick={
+                }, messageClick = {
                     navController.navigate("messages_screen")
-                },homeClick={
+                }, homeClick = {
 
-                },homeTint = MaterialTheme.colorScheme.primary
+                }, homeTint = MaterialTheme.colorScheme.primary
             )
         }
     ) { innerPadding ->
@@ -120,6 +139,28 @@ fun HomeScreen(
             }
         }
     }
+    if (showVisibilitySheet) {
+        selectedPost?.let { post ->
+            FriendSelectorBottomSheet(
+                friends = friends,
+                followers = followers,
+                initiallySelectedIds = post.visibleTo,
+                onDismiss = { showVisibilitySheet = false },
+                onSelectionDone = { selectedIds ->
+                    homeViewModel.updatePostVisibility(
+                        post.documentId,
+                        "private",
+                        selectedIds
+                    ) { success ->
+                        if (success) {
+                            showToast(context, "Görünürlük ayarları güncellendi.")
+                        }
+                    }
+                    showVisibilitySheet = false
+                }
+            )
+        }
+    }
 
     if (optionsSheetState.isVisible) {
         ModalBottomSheet(
@@ -133,10 +174,90 @@ fun HomeScreen(
                     post = post,
                     onHide = {
                         scope.launch { optionsSheetState.hide() }
+                    },
+                    currentUserId = currentUser?.uid,
+                    onDeleteClick = {
+                        scope.launch { optionsSheetState.hide() }.invokeOnCompletion {
+                            // Kapandıktan sonra onay diyaloğunu göster
+                            showDeleteConfirmDialog = true
+                        }
+                    },
+                    onEditClick = {
+                        scope.launch { optionsSheetState.hide() }.invokeOnCompletion {
+                            showEditPostSheet = true
+                        }
+                    },
+                    onSetVisibilityClick = {
+                        scope.launch { optionsSheetState.hide() }.invokeOnCompletion {
+                            showVisibilitySheet = true
+                        }
+                    },
+                    onAddToFavoritesClick = {
+                        homeViewModel.addToFavorites(post.documentId)
+                        scope.launch { optionsSheetState.hide() }
                     }
                 )
             }
         }
+    }
+
+    if (showEditPostSheet) {
+        ModalBottomSheet(
+            sheetState = editPostSheetState,
+            onDismissRequest = { showEditPostSheet = false }
+        ) {
+            selectedPost?.let { post ->
+                EditPostBottomSheet(
+                    post = post,
+                    onDismiss = { showEditPostSheet = false },
+                    onSaveClicked = { newComment ->
+                        homeViewModel.updatePostComment(post.documentId, newComment) { success ->
+                            if (success) {
+                                showToast(context, "Açıklama güncellendi.")
+                            } else {
+                                showToast(context, "Hata: Açıklama güncellenemedi.")
+                            }
+                        }
+                        showEditPostSheet = false // Kaydettikten sonra kapat
+                    }
+                )
+            }
+        }
+    }
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = false
+            },
+            title = {
+                Text("Postu Sil")
+            },
+            text = {
+                Text("Bu postu kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPost?.let { postToDelete ->
+                            homeViewModel.deletePost(postToDelete.documentId, context)
+                        }
+                        showDeleteConfirmDialog = false
+                    }
+                ) {
+                    Text("Evet, Sil")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                    }
+                ) {
+                    Text("İptal")
+                }
+            }
+        )
     }
 
     if (commentSheetState.isVisible) {
@@ -190,10 +311,15 @@ fun PostItem(
             }
             val formattedDate = remember(post.date) {
                 val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-                sdf.format(post.date?.toDate()) // Timestamp'i önce Date'e, sonra String'e çeviriyoruz
+                sdf.format(post.date?.toDate())
             }
 
-            Text(formattedDate, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color.LightGray)
+            Text(
+                formattedDate,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.LightGray
+            )
             Spacer(modifier = Modifier.height(8.dp))
             AsyncImage(
                 model = post.downloadUrl,
@@ -242,8 +368,18 @@ fun prev_Home() {
     val commentList = arrayListOf(comment5)
 
     val homeViewModel: HomeViewModel = viewModel()
-    val commentsViewModel : CommentsViewModel = viewModel()
+    val commentsViewModel: CommentsViewModel = viewModel()
+    val connectionsViewModel: ConnectionsViewModel = viewModel()
 
-    HomeScreen(rememberNavController(),homeViewModel,commentsViewModel,postList, commentList = commentList, onPostLikeClicked = {}, onCommentLikeClicked = {})
+    HomeScreen(
+        rememberNavController(),
+        homeViewModel,
+        commentsViewModel,
+        connectionsViewModel,
+        commentList = commentList,
+        onPostLikeClicked = {},
+        onCommentLikeClicked = {},
+        postList = postList
+    )
 }
 
