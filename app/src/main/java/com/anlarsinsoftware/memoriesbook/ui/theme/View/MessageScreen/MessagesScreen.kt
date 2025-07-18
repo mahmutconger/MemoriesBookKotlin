@@ -47,6 +47,7 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.ktx.functions
 import com.google.firebase.ktx.Firebase
@@ -57,10 +58,10 @@ private lateinit var functions: FirebaseFunctions
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(navController: NavController,
-                   messagesViewModel: MessagesViewModel = viewModel()) {
+                   connectionsViewModel: ConnectionsViewModel=viewModel()) {
     functions = Firebase.functions
     val context = LocalContext.current
-    val friends by messagesViewModel.friends.collectAsState()
+    val friends by connectionsViewModel.friends.collectAsState()
 
     Scaffold(
         topBar = {
