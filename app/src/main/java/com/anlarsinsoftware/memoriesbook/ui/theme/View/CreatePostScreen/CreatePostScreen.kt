@@ -1,13 +1,10 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.View
+package com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen
 
-import android.Manifest
 import android.net.Uri
-import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,38 +26,46 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UploadUiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePostViewModel = viewModel()) {
+fun CreatePostScreen(
+    navController: NavController,
+    createPostViewModel: CreatePostViewModel ,
+    connectionsViewModel: ConnectionsViewModel
+) {
     val context = LocalContext.current
 
-    // 1. STATE'LERİ TEMİZLİYORUZ VE BİRLEŞTİRİYORUZ
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-    var comment by remember { mutableStateOf("") } // Açıklama için SADECE BİR state
+    var comment by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf("public") }
     var visibleToList by remember { mutableStateOf<List<String>>(emptyList()) }
     var showFriendSelector by remember { mutableStateOf(false) }
     val uiState by createPostViewModel.uiState.collectAsState()
 
-    // 2. SADECE MODERN PHOTO PICKER LAUNCHER'I KULLANIYORUZ
+    val friends by connectionsViewModel.friends.collectAsState()
+    val followers by connectionsViewModel.followers.collectAsState()
+
+
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> uri?.let { imageUri = it } }
     )
 
-    // Yükleme başarılı veya hatalı olduğunda çalışacak ve geri dönecek olan blok
     LaunchedEffect(key1 = uiState) {
         when (val state = uiState) {
             is UploadUiState.Success -> {
                 Toast.makeText(context, "Post başarıyla paylaşıldı!", Toast.LENGTH_SHORT).show()
                 navController.popBackStack()
             }
+
             is UploadUiState.Error -> {
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
             }
+
             else -> {}
         }
     }
@@ -68,7 +73,13 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Anı Oluştur", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                title = {
+                    Text(
+                        "Anı Oluştur",
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Center
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri Git")
@@ -78,7 +89,6 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
             )
         }
     ) { innerPadding ->
-        // 3. YERLEŞİMİ DÜZELTTİK: Tüm elemanlar artık dikey bir Column içinde, doğru sırada.
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -86,7 +96,6 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // --- FOTOĞRAF SEÇME ALANI ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -103,7 +112,11 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
             ) {
                 if (imageUri == null) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Face, contentDescription = null, modifier = Modifier.size(60.dp))
+                        Icon(
+                            Icons.Default.Face,
+                            contentDescription = null,
+                            modifier = Modifier.size(60.dp)
+                        )
                         Text("Resim Seçmek İçin Tıkla")
                     }
                 } else {
@@ -118,7 +131,6 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- AÇIKLAMA ALANI ---
             OutlinedTextField(
                 value = comment,
                 onValueChange = { comment = it },
@@ -130,16 +142,20 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // --- GÖRÜNÜRLÜK SEÇENEKLERİ ---
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = visibility == "public", onClick = { visibility = "public" })
                 Text("Herkese Açık")
                 Spacer(Modifier.width(16.dp))
-                RadioButton(selected = visibility == "private", onClick = { visibility = "private" })
+                RadioButton(
+                    selected = visibility == "private",
+                    onClick = { visibility = "private" })
                 Text("Özel")
             }
             if (visibility == "private") {
-                OutlinedButton(onClick = { showFriendSelector = true }, modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { showFriendSelector = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Text("Görecek Kişileri Seç (${visibleToList.size})")
                 }
             }
@@ -152,20 +168,38 @@ fun CreatePostScreen(navController: NavController, createPostViewModel: CreatePo
                     imageUri?.let { uri ->
                         createPostViewModel.createPost(uri, comment, visibility, visibleToList)
                     } ?: run {
-                        Toast.makeText(context, "Lütfen bir resim seçin.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Lütfen bir resim seçin.", Toast.LENGTH_SHORT)
+                            .show()
                     }
                 },
                 enabled = uiState !is UploadUiState.Loading,
-                modifier = Modifier.fillMaxWidth().height(50.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp)
             ) {
                 if (uiState is UploadUiState.Loading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = Color.White)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
                 } else {
                     Text("Paylaş", fontSize = 16.sp)
                 }
             }
 
-            if (showFriendSelector) { /* BottomSheet gösterilir */ }
+            if (showFriendSelector) {
+                FriendSelectorBottomSheet(
+                    friends = friends,
+                    followers = followers,
+                    initiallySelectedIds = visibleToList,
+                    onDismiss = { showFriendSelector = false },
+                    onSelectionDone = { selectedIds ->
+                        visibleToList = selectedIds
+                        showFriendSelector = false
+                    }
+                )
+            }
         }
     }
 }
