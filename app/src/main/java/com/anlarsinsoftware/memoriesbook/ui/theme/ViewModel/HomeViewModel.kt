@@ -1,10 +1,12 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -107,12 +109,50 @@ class HomeViewModel : ViewModel() {
         awaitClose { listener.remove() }
     }
 
-    fun updatePostComment(postId: String, newComment: String) {
-        firestore.collection("posts").document(postId).update("comment", newComment)
+    fun deletePost(postId: String,context : Context) {
+        firestore.collection("posts").document(postId).delete()
+            .addOnSuccessListener {
+                showToast(context,"Gönderi başarıyla silindi")
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "Post silinirken hata oluştu.", e)
+            }
     }
 
-    fun deletePost(postId: String) {
-        firestore.collection("posts").document(postId).delete()
+    fun updatePostComment(postId: String, newComment: String, onResult: (Boolean) -> Unit) {
+        firestore.collection("posts").document(postId)
+            .update("comment", newComment)
+            .addOnSuccessListener {
+                Log.d("Firestore", "Post comment updated successfully.")
+                onResult(true)
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firestore", "Error updating comment.", e)
+                onResult(false)
+            }
+    }
+    fun updatePostVisibility(
+        postId: String,
+        newVisibility: String,
+        newVisibleToList: List<String>,
+        onResult: (Boolean) -> Unit
+    ) {
+        val updates = mapOf(
+            "visibility" to newVisibility,
+            "visibleTo" to if (newVisibility == "private") newVisibleToList else emptyList()
+        )
+        firestore.collection("posts").document(postId).update(updates)
+            .addOnSuccessListener { onResult(true) }
+            .addOnFailureListener { onResult(false) }
+    }
+
+
+    fun addToFavorites(postId: String) {
+        val currentUser = auth.currentUser ?: return
+        // Bu fonksiyon, kullanıcının 'favorites' adlı bir dizisine post ID'sini ekleyebilir.
+        // Veya postun içinde 'favoritedBy' adlı bir diziye kullanıcı ID'si eklenebilir.
+        // Şimdilik sadece bir log atalım.
+        Log.d("ViewModel", "Post $postId favorilere eklendi by ${currentUser.uid}")
     }
 
     fun toggleLikeStatus(postId: String, isLiked: Boolean) {
