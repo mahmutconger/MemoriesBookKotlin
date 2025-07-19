@@ -13,6 +13,8 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ServerValue
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
+import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -26,6 +28,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class HomeViewModel : ViewModel() {
     private val auth = Firebase.auth
@@ -39,6 +42,9 @@ class HomeViewModel : ViewModel() {
     private val _uiState = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _postLikers = MutableStateFlow<List<FriendProfile>>(emptyList())
+    val postLikers: StateFlow<List<FriendProfile>> = _postLikers.asStateFlow()
+
     init {
         val currentUser = auth.currentUser
         if (currentUser != null) {
@@ -49,7 +55,11 @@ class HomeViewModel : ViewModel() {
 
             viewModelScope.launch {
                 // 2. Bu üç akışı 'combine' ile birleştiriyoruz. Herhangi biri güncellendiğinde, bu blok çalışır.
-                combine(publicPostsFlow, privateForMeFlow, myPrivatePostsFlow) { public, privateForMe, myPrivate ->
+                combine(
+                    publicPostsFlow,
+                    privateForMeFlow,
+                    myPrivatePostsFlow
+                ) { public, privateForMe, myPrivate ->
                     // 3. Sonuçları birleştir, tekrarları sil ve sırala.
                     (public + privateForMe + myPrivate)
                         .distinctBy { it.documentId }
@@ -58,7 +68,10 @@ class HomeViewModel : ViewModel() {
                     // 4. Son listeyi UI'ın dinlediği StateFlow'a ata.
                     _posts.value = combinedAndSortedList
                     _uiState.value = HomeUiState.Success
-                    Log.d("ViewModelSuccess", "Feed updated with ${combinedAndSortedList.size} posts.")
+                    Log.d(
+                        "ViewModelSuccess",
+                        "Feed updated with ${combinedAndSortedList.size} posts."
+                    )
                 }
             }
         } else {
@@ -71,7 +84,9 @@ class HomeViewModel : ViewModel() {
         val listener = firestore.collection("posts")
             .whereEqualTo("visibility", "public")
             .addSnapshotListener { snapshot, e ->
-                if (e != null) { close(e); return@addSnapshotListener }
+                if (e != null) {
+                    close(e); return@addSnapshotListener
+                }
                 val postsWithIds = snapshot?.documents?.map { doc ->
                     val post = doc.toObject(Posts::class.java)
                     post?.copy(documentId = doc.id)
@@ -84,35 +99,48 @@ class HomeViewModel : ViewModel() {
     }
 
     // Bana özel postları dinleyen Flow
+    // HomeViewModel.kt içinde
+
     private fun getPrivateForMePostsFlow(userId: String): Flow<List<Posts>> = callbackFlow {
         val listener = firestore.collection("posts")
             .whereEqualTo("visibility", "private")
             .whereArrayContains("visibleTo", userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) { close(e); return@addSnapshotListener }
-                val posts = snapshot?.toObjects(Posts::class.java) ?: emptyList()
-                trySend(posts)
+
+                // DÜZELTME: documentId'yi manuel olarak ata
+                val postsWithIds = snapshot?.documents?.map { doc ->
+                    doc.toObject(Posts::class.java)?.copy(documentId = doc.id)
+                }?.filterNotNull() ?: emptyList()
+
+                trySend(postsWithIds)
             }
         awaitClose { listener.remove() }
     }
 
-    // Benim özel postlarımı dinleyen Flow
+    // HomeViewModel.kt içinde
+
     private fun getMyPrivatePostsFlow(userId: String): Flow<List<Posts>> = callbackFlow {
         val listener = firestore.collection("posts")
             .whereEqualTo("visibility", "private")
             .whereEqualTo("authorId", userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) { close(e); return@addSnapshotListener }
-                val posts = snapshot?.toObjects(Posts::class.java) ?: emptyList()
-                trySend(posts)
+
+                // DÜZELTME: documentId'yi manuel olarak ata
+                val postsWithIds = snapshot?.documents?.map { doc ->
+                    doc.toObject(Posts::class.java)?.copy(documentId = doc.id)
+                }?.filterNotNull() ?: emptyList()
+
+                trySend(postsWithIds)
             }
         awaitClose { listener.remove() }
     }
 
-    fun deletePost(postId: String,context : Context) {
+    fun deletePost(postId: String, context: Context) {
         firestore.collection("posts").document(postId).delete()
             .addOnSuccessListener {
-                showToast(context,"Gönderi başarıyla silindi")
+                showToast(context, "Gönderi başarıyla silindi")
             }
             .addOnFailureListener { e ->
                 Log.e("Firestore", "Post silinirken hata oluştu.", e)
@@ -131,6 +159,7 @@ class HomeViewModel : ViewModel() {
                 onResult(false)
             }
     }
+
     fun updatePostVisibility(
         postId: String,
         newVisibility: String,
@@ -155,27 +184,56 @@ class HomeViewModel : ViewModel() {
         Log.d("ViewModel", "Post $postId favorilere eklendi by ${currentUser.uid}")
     }
 
-    fun toggleLikeStatus(postId: String, isLiked: Boolean) {
-    }
 
     fun onPostLikeClicked(post: Posts) {
+        val currentUser = auth.currentUser ?: return
+        val currentUid = currentUser.uid
+
+        val isAlreadyLiked = post.likedBy.contains(currentUid)
+
+        // Önce UI'ı hızlıca güncelle (Optimistic Update)
         _posts.update { currentPosts ->
             currentPosts.map { p ->
                 if (p.documentId == post.documentId) {
-                    p.copy(isLiked = !p.isLiked)
+                    val newLikedBy = if (isAlreadyLiked) {
+                        p.likedBy - currentUid
+                    } else {
+                        p.likedBy + currentUid
+                    }
+                    p.copy(likedBy = newLikedBy)
                 } else {
                     p
                 }
             }
         }
-        firestore.collection("posts").document(post.documentId)
-            .update("isLiked", !post.isLiked)
-            .addOnSuccessListener {
-                Log.d("Firestore", "Post like status updated successfully.")
+
+        // Sonra değişikliği Firestore'a kaydet
+        val postRef = firestore.collection("posts").document(post.documentId)
+        if (isAlreadyLiked) {
+            // Beğeniyi geri al
+            postRef.update("likedBy", FieldValue.arrayRemove(currentUid))
+        } else {
+            // Beğen
+            postRef.update("likedBy", FieldValue.arrayUnion(currentUid))
+        }
+    }
+
+    // Beğenenlerin listesini çekmek için yeni fonksiyon
+    fun fetchLikersForPost(post: Posts) {
+        if (post.likedBy.isEmpty()) {
+            _postLikers.value = emptyList()
+            return
+        }
+        viewModelScope.launch {
+            try {
+                val usersQuery = firestore.collection("Users")
+                    .whereIn(FieldPath.documentId(), post.likedBy)
+                    .get().await()
+                _postLikers.value = usersQuery.toObjects(FriendProfile::class.java)
+            } catch (e: Exception) {
+                // Hata yönetimi
             }
-            .addOnFailureListener { e ->
-                Log.e("Firestore", "Error updating post like status.", e)
-            }
+        }
     }
 
     fun setUserOnline() {
