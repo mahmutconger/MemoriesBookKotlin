@@ -1,4 +1,6 @@
 import android.util.Log
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -24,10 +26,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -40,6 +45,7 @@ import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ExpandableText
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
@@ -47,12 +53,14 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Util.url1
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.FriendSelectorBottomSheet
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.BottomSheetContent
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.EditPostBottomSheet
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.FriendItem
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -80,6 +88,12 @@ fun HomeScreen(
     val friends by connectionsViewModel.friends.collectAsState()
     val followers by connectionsViewModel.followers.collectAsState()
     var showVisibilitySheet by remember { mutableStateOf(false) }
+    val comments by commentsViewModel.comments.collectAsState()
+    val likers by homeViewModel.postLikers.collectAsState()
+    var showLikersSheet by remember { mutableStateOf(false) }
+    val commentLikersSheetState = rememberModalBottomSheetState()
+    var showCommentLikersSheet by remember { mutableStateOf(false) }
+    val commentLikers by commentsViewModel.commentLikers.collectAsState()
 
 
     val currentUser = FirebaseAuth.getInstance().currentUser
@@ -128,6 +142,10 @@ fun HomeScreen(
                     },
                     onLikeClick = {
                         onPostLikeClicked(post)
+                    },
+                    onShowLikersClick = {
+                        homeViewModel.fetchLikersForPost(post)
+                        showLikersSheet = true
                     },
                     onCommentClick = {
                         Log.d("CommentClick", "Yorumlar için tıklandı. Post ID: ${post.documentId}")
@@ -178,7 +196,6 @@ fun HomeScreen(
                     currentUserId = currentUser?.uid,
                     onDeleteClick = {
                         scope.launch { optionsSheetState.hide() }.invokeOnCompletion {
-                            // Kapandıktan sonra onay diyaloğunu göster
                             showDeleteConfirmDialog = true
                         }
                     },
@@ -269,16 +286,63 @@ fun HomeScreen(
 
                 CommentBottomSheetContent(
                     post = post,
-                    commentList = commentList,
+                    commentList = comments, // comments, ViewModel'den collectAsState ile alınmalı
                     onCommentLikeClicked = { likedComment ->
-                        selectedPost?.let { post ->
-                            onCommentLikeClicked(likedComment)
-                        }
+                        commentsViewModel.onCommentLikeClicked(likedComment)
                     },
-                    onHide = { scope.launch { commentSheetState.hide() } }
+                    // YENİ BAĞLANTI
+                    onAddCommentClicked = { commentText ->
+                        commentsViewModel.addComment(post.documentId, commentText)
+                    },
+                    onHide = {
+                        scope.launch { commentSheetState.hide() }
+                    }, onShowCommentLikers = { commentToShowLikers ->
+                        commentsViewModel.fetchLikersForComment(commentToShowLikers)
+                        scope.launch {
+                            commentSheetState.hide()
+                            showCommentLikersSheet = true
+                        }
+                    }
                 )
             }
         }
+    }
+
+    if (showCommentLikersSheet) {
+        ModalBottomSheet(
+            sheetState = commentLikersSheetState,
+            onDismissRequest = {
+                showCommentLikersSheet = false
+            }
+        ) {
+            LazyColumn(contentPadding = PaddingValues(16.dp)) {
+                items(items = likers) { liker ->
+                    LikersItem(liker.photoUrl, liker.username)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LikersItem(photoUrl: String, userName: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = photoUrl,
+            contentDescription = "User Image",
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = 50.dp),
+            contentScale = ContentScale.Crop
+        )
+        Text(userName, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+        Image(
+            painter = painterResource(R.drawable.like_selected),
+            contentDescription = "Beğenildi butonu"
+        )
     }
 }
 
@@ -287,8 +351,13 @@ fun PostItem(
     post: Posts,
     onMenuClick: () -> Unit,
     onLikeClick: () -> Unit,
-    onCommentClick: () -> Unit
+    onCommentClick: () -> Unit,
+    onShowLikersClick: () -> Unit
 ) {
+    val currentUser = Firebase.auth.currentUser
+    val isLikedByMe by remember(post.likedBy, currentUser) {
+        mutableStateOf(currentUser?.uid in post.likedBy)
+    }
     Card(
         modifier = Modifier
 
@@ -330,31 +399,63 @@ fun PostItem(
                 contentScale = ContentScale.Crop
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = post.comment)
+
+            ExpandableText(
+                text = post.comment,
+                style = MaterialTheme.typography.bodyMedium
+            )
             mySpacer(10)
 
-            Row(Modifier.fillMaxWidth()) {
-                val likeIcon =
-                    if (post.isLiked) R.drawable.like_selected else R.drawable.like_unselected
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    // Gruba tıklanabilir özellik vererek kullanıcı deneyimini iyileştiriyoruz
+                    modifier = Modifier.clickable { onLikeClick() }
+                ) {
+                    val likeIcon =
+                        if (isLikedByMe) R.drawable.like_selected else R.drawable.like_unselected
+                    myImageButton(id = likeIcon, onClick = onLikeClick)
 
-                myImageButton(
-                    id = likeIcon,
-                    imageSize = 25,
-                    onClick = onLikeClick,
-                    tintColor = MaterialTheme.colorScheme.primary
-                )
+                    if (post.likedBy.isNotEmpty()) {
+                        Text(
+                            text = "${post.likedBy.size} beğeni",
+                            modifier = Modifier
+                                .clickable { onShowLikersClick() }
+                                .padding(start = 4.dp, end = 8.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
 
-                Spacer(Modifier.width(15.dp))
-                myImageButton(
-                    R.drawable.comment_icon,
-                    25,
-                    tintColor = MaterialTheme.colorScheme.primary,
-                    onClick = onCommentClick
-                )
+                Row(
+                    modifier = Modifier.clickable { onCommentClick() }.padding(start = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    myImageButton(
+                        id = R.drawable.comment_icon,
+                        imageSize = 25,
+                        onClick = onCommentClick,
+                        tintColor = MaterialTheme.colorScheme.primary
+                    )
+                    if (post.commentCount > 0) {
+                        Text(
+                            text = "${post.commentCount} yorum",
+                            modifier = Modifier.padding(start = 4.dp),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-
         }
     }
+
 }
 
 
