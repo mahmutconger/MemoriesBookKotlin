@@ -13,6 +13,7 @@ data class Posts(
     val date: Timestamp? = null,
     val visibility: String = "public",
     val visibleTo: List<String> = emptyList(),
-    var isLiked: Boolean = false,
+    val commentCount: Long = 0,
+    val likedBy: List<String> = emptyList(),
     var documentId: String = "" // documentId için de varsayılan değer eklemek iyidir.
 )
