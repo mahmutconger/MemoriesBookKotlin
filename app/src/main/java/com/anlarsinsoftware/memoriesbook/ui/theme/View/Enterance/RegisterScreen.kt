@@ -1,5 +1,9 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance
 
+import android.app.Activity
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,10 +46,13 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myTextField
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.RegisterViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.RegistrationUiState
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 
 @Composable
 fun RegisterScreen(
-    navController: NavController,
+    onRegisterSuccess: () -> Unit,
     registerViewModel: RegisterViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -63,19 +70,36 @@ fun RegisterScreen(
     LaunchedEffect(key1 = uiState) {
         when (val state = uiState) {
             is RegistrationUiState.Success -> {
-                showToast(context, "Kayıt başarılı!")
-                navController.navigate("home_screen") {
-                    popUpTo("welcome_screen") { inclusive = true }
-                }
-            }
 
+                onRegisterSuccess()
+            }
             is RegistrationUiState.Error -> {
                 showToast(context, state.message, isLengthLong = true)
             }
-
             else -> {}
         }
     }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)!!
+                account.idToken?.let { idToken ->
+                    // Token'ı alıp ViewModel'e gönderiyoruz
+                    registerViewModel.signInWithGoogle(idToken)
+                } ?: run {
+                    showToast(context, "Google token alınamadı.", true)
+                }
+            } catch (e: ApiException) {
+                Log.w("GoogleSignIn", "Google ile kayıt başarısız", e)
+                showToast(context, "Google ile kayıt başarısız oldu.", true)
+            }
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -145,8 +169,19 @@ fun RegisterScreen(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
-                    .clickable {
-                        navController.navigate("home_screen")
+                    .clickable(enabled = uiState !is RegistrationUiState.Loading) {
+
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+
+
+                        googleSignInClient.signOut().addOnCompleteListener {
+
+                            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+                        }
                     },
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
@@ -173,10 +208,4 @@ fun RegisterScreen(
 
         }
     }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun prev_Register() {
-    RegisterScreen(rememberNavController())
 }
