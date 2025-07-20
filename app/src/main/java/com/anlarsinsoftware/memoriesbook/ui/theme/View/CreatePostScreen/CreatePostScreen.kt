@@ -34,7 +34,7 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UploadUiState
 @Composable
 fun CreatePostScreen(
     navController: NavController,
-    createPostViewModel: CreatePostViewModel ,
+    createPostViewModel: CreatePostViewModel,
     connectionsViewModel: ConnectionsViewModel
 ) {
     val context = LocalContext.current
