@@ -26,18 +26,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
@@ -49,22 +45,33 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LoginUiState
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
-import com.google.firebase.Firebase
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.auth
 
 
 @Composable
-fun LoginScreen(navController: NavController,
-                logInViewModel: LogInViewModel= viewModel()
+fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    logInViewModel: LogInViewModel = viewModel()
 ) {
 
     val context = LocalContext.current
-    var isLoading by remember { mutableStateOf(false) } // Yükleme durumunu göstermek için
-
 
     // ViewModel'den gelen genel UI durumunu dinliyoruz
     val uiState by logInViewModel.uiState.collectAsState()
+
+    LaunchedEffect(key1 = uiState) {
+        when (val state = uiState) {
+            is LoginUiState.Success -> {
+                // Artık burada navigasyon yapmıyoruz, sadece haber veriyoruz.
+                onLoginSuccess()
+            }
+
+            is LoginUiState.Error -> {
+                showToast(context, state.message, isLengthLong = true)
+            }
+
+            else -> {}
+        }
+    }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -85,23 +92,7 @@ fun LoginScreen(navController: NavController,
         }
     }
 
-    LaunchedEffect(key1 = uiState) {
-        when (val state = uiState) {
-            is LoginUiState.Success -> {
-                showToast(context, "Giriş başarılı!")
-                navController.navigate("home_screen") {
-                    popUpTo("welcome_screen") { inclusive = true }
-                }
-            }
 
-            is LoginUiState.Error -> {
-                showToast(context, state.message, isLengthLong = true)
-            }
-
-            else -> {}
-        }
-    }
-    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -135,12 +126,12 @@ fun LoginScreen(navController: NavController,
 
             mySpacer(24)
             Button(onClick = {
-               if (userEmail.isBlank() || password.isBlank()) {
+                if (userEmail.isBlank() || password.isBlank()) {
                     showToast(context, "Tüm alanları doldurunuz.")
                 } else {
                     logInViewModel.loginUser(userEmail, password)
                 }
-            }, enabled = uiState !is LoginUiState.Loading )
+            }, enabled = uiState !is LoginUiState.Loading)
             {
                 Text("Giriş yap")
             }
@@ -152,61 +143,49 @@ fun LoginScreen(navController: NavController,
             }
 
             mySpacer(100)
-            Card ( modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clickable(enabled = !isLoading) {
-                    isLoading = true
-
-                    val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                        .requestIdToken(context.getString(R.string.default_web_client_id))
-                        .requestEmail()
-                        .build()
-
-                    val googleSignInClient = GoogleSignIn.getClient(context, gso)
-
-                    launcher.launch(googleSignInClient.signInIntent)
-                },
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .clickable(enabled = uiState !is LoginUiState.Loading) {
+                        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                            .requestIdToken(context.getString(R.string.default_web_client_id))
+                            .requestEmail()
+                            .build()
+                        val googleSignInClient = GoogleSignIn.getClient(context, gso)
+                        googleSignInClient.signOut().addOnCompleteListener {
+                            launcher.launch(googleSignInClient.signInIntent)
+                        }
+                    },
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ){
-                Row (Modifier.fillMaxWidth()
-                    .padding(5.dp),
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
-                    ){
+                ) {
                     val context = LocalContext.current
-                    myImageButton (id= R.drawable.google_ico, imageSize = 50){
-                        showToast(context,"Google",false)
+                    myImageButton(id = R.drawable.google_ico, imageSize = 50) {
+                        showToast(context, "Google", false)
                     }
                     Spacer(Modifier.width(20.dp))
-                    Text("Google İle Oturum Aç",
+                    Text(
+                        "Google İle Oturum Aç",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp)
+                        fontSize = 16.sp
+                    )
+                }
+                if (uiState is LoginUiState.Loading) {
+                    Spacer(Modifier.height(16.dp))
+                    CircularProgressIndicator()
                 }
 
             }
         }
     }
 }
-private fun firebaseAuthWithGoogle(idToken: String, onResult: (Boolean) -> Unit) {
-    val credential = GoogleAuthProvider.getCredential(idToken, null)
-    Firebase.auth.signInWithCredential(credential)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                // Başarılı
-                onResult(true)
-            } else {
-                // Başarısız
-                onResult(false)
-            }
-        }
-}
 
 
 
-@Preview(showBackground = true)
-@Composable
-fun Preview_Login() {
-
-    LoginScreen(navController = rememberNavController())
-}
