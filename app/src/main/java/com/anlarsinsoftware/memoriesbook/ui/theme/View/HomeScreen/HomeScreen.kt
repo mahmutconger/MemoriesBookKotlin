@@ -69,14 +69,18 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     navController: NavController,
+    // 1. Parametreler artık çok daha sade: Sadece ViewModel'leri alıyoruz.
     homeViewModel: HomeViewModel,
     commentsViewModel: CommentsViewModel,
-    connectionsViewModel: ConnectionsViewModel,
-    postList: List<Posts>,
-    commentList: List<Comments>,
-    onPostLikeClicked: (Posts) -> Unit,
-    onCommentLikeClicked: (Comments) -> Unit
+    connectionsViewModel: ConnectionsViewModel
 ) {
+    val postList by homeViewModel.posts.collectAsState()
+    val commentList by commentsViewModel.comments.collectAsState()
+    val likers by homeViewModel.postLikers.collectAsState()
+    val friends by connectionsViewModel.friends.collectAsState()
+    val followers by connectionsViewModel.followers.collectAsState()
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+
     val context = LocalContext.current
     val optionsSheetState = rememberModalBottomSheetState()
     val commentSheetState = rememberModalBottomSheetState()
@@ -85,11 +89,8 @@ fun HomeScreen(
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val editPostSheetState = rememberModalBottomSheetState()
     var showEditPostSheet by remember { mutableStateOf(false) }
-    val friends by connectionsViewModel.friends.collectAsState()
-    val followers by connectionsViewModel.followers.collectAsState()
     var showVisibilitySheet by remember { mutableStateOf(false) }
     val comments by commentsViewModel.comments.collectAsState()
-    val likers by homeViewModel.postLikers.collectAsState()
     var showLikersSheet by remember { mutableStateOf(false) }
     val commentLikersSheetState = rememberModalBottomSheetState()
     var showCommentLikersSheet by remember { mutableStateOf(false) }
@@ -141,7 +142,7 @@ fun HomeScreen(
                         scope.launch { optionsSheetState.show() }
                     },
                     onLikeClick = {
-                        onPostLikeClicked(post)
+                        homeViewModel.onPostLikeClicked(post)
                     },
                     onShowLikersClick = {
                         homeViewModel.fetchLikersForPost(post)
@@ -476,11 +477,7 @@ fun prev_Home() {
         rememberNavController(),
         homeViewModel,
         commentsViewModel,
-        connectionsViewModel,
-        commentList = commentList,
-        onPostLikeClicked = {},
-        onCommentLikeClicked = {},
-        postList = postList
+        connectionsViewModel
     )
 }
 
