@@ -2,6 +2,7 @@ package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
@@ -63,6 +64,39 @@ class RegisterViewModel : ViewModel() {
 
             } catch (e: Exception) {
                 _uiState.value = RegistrationUiState.Error(e.localizedMessage ?: "Bilinmeyen bir hata oluştu.")
+            }
+        }
+    }
+
+    fun signInWithGoogle(idToken: String) {
+        viewModelScope.launch {
+            _uiState.value = RegistrationUiState.Loading
+            try {
+                val credential = GoogleAuthProvider.getCredential(idToken, null)
+                val result = auth.signInWithCredential(credential).await()
+
+                val user = result.user
+                // KRİTİK KONTROL: Bu kullanıcı yeni mi oluşturuldu?
+                val isNewUser = result.additionalUserInfo?.isNewUser ?: false
+
+                if (user != null && isNewUser) {
+                    // Eğer kullanıcı yeniyse, Firestore'da onun için bir döküman oluştur.
+                    val userMap = hashMapOf(
+                        "uid" to user.uid,
+                        "username" to user.displayName,
+                        "email" to user.email,
+                        "photoUrl" to user.photoUrl?.toString(),
+                        "following" to emptyList<String>(),
+                        "followers" to emptyList<String>(),
+                        "friends" to emptyList<String>()
+                    )
+                    firestore.collection("Users").document(user.uid).set(userMap).await()
+                }
+
+                _uiState.value = RegistrationUiState.Success
+
+            } catch (e: Exception) {
+                _uiState.value = RegistrationUiState.Error(e.localizedMessage ?: "Google ile kayıt sırasında bir hata oluştu.")
             }
         }
     }
