@@ -1,6 +1,7 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.Tools
 
 import HomeScreen
+import MessagesViewModel
 import ProfileScreen
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -9,107 +10,119 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.MessagesScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.* // View altındaki her şeyi import et
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.CreatePostScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.LoginScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.RegisterScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.WellComeScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ChatDetailScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.ConnectionsScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen.SettingsScreen
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModelFactory
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.*
 import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavigation() {
+    // 1. Tema yönetimi gibi uygulama genelindeki state'ler en üstte kalır.
     val context = LocalContext.current
     val themeDataStore = remember { ThemeDataStore(context) }
     val isDarkMode by themeDataStore.getTheme.collectAsState(initial = false)
     val scope = rememberCoroutineScope()
-    val toggleTheme: () -> Unit = {
-        scope.launch {
-            themeDataStore.setTheme(!isDarkMode)
-        }
-    }
-    val homeViewModel: HomeViewModel = viewModel()
-    val commentsViewModel: CommentsViewModel = viewModel()
-    val createPostViewModel: CreatePostViewModel = viewModel()
-    val connectionsViewModel: ConnectionsViewModel = viewModel()
+
     MemoriesBookTheme(darkTheme = isDarkMode) {
         val navController = rememberNavController()
-        NavHost(navController = navController, startDestination = "welcome_screen") {
-            composable("welcome_screen") {
-                WellComeScreen(navController = navController)
-            }
-            composable("register_screen") {
-                RegisterScreen(navController)
-            }
-            composable("login_screen") {
-                LoginScreen(navController)
-            }
-            composable("home_screen") {
 
-                val posts by homeViewModel.posts.collectAsState()
-                val comments by commentsViewModel.comments.collectAsState()
+        NavHost(navController = navController, startDestination = "auth_flow") {
 
-                HomeScreen(
-                    navController = navController,
-                    postList = posts,
-                    commentList = comments,
-                    onPostLikeClicked = homeViewModel::onPostLikeClicked,
-                    onCommentLikeClicked = commentsViewModel::onCommentLikeClicked,
-                    homeViewModel = homeViewModel,
-                    commentsViewModel = commentsViewModel,
-                    connectionsViewModel = connectionsViewModel
-                )
-            }
-            composable("createPost_screen") {
-                CreatePostScreen(
-                    navController,
-                    createPostViewModel = createPostViewModel,
-                    connectionsViewModel = connectionsViewModel
-                )
-            }
-            composable("profile_screen") {
-                ProfileScreen(navController)
-            }
-            composable("settings_screen") {
-                SettingsScreen(
-                    navController = navController,
-                    isDarkMode = isDarkMode,
-                    onThemeToggle = toggleTheme
-                )
-            }
-            composable("messages_screen") {
-                MessagesScreen(navController)
-            }
-            composable("connections_screen") {
-                ConnectionsScreen(navController)
-            }
-            composable("chat_screen/{friendId}") { backStackEntry ->
-                val friendId = backStackEntry.arguments?.getString("friendId")
-
-                // ChatDetailViewModel'i burada, Factory kullanarak ve homeViewModel'i vererek oluşturuyoruz.
-                val chatDetailViewModel: ChatDetailViewModel = viewModel(
-                    factory = ChatDetailViewModelFactory(
-                        friendId = friendId ?: "",
-                        homeViewModel = homeViewModel
+            // --- GİRİŞ ÖNCESİ EKRANLAR (Authentication Flow) ---
+            navigation(startDestination = "welcome_screen", route = "auth_flow") {
+                composable("welcome_screen") {
+                    WellComeScreen(navController = navController)
+                }
+                composable("register_screen") {
+                    // Kayıt başarılı olduğunda ana akışa yönlendir
+                    RegisterScreen(
+                        onRegisterSuccess = {
+                            navController.navigate("main_flow") {
+                                popUpTo("auth_flow") { inclusive = true }
+                            }
+                        }
                     )
-                )
+                }
+                composable("login_screen") {
+                    // Giriş başarılı olduğunda ana akışa yönlendir
+                    LoginScreen(
+                        onLoginSuccess = {
+                            navController.navigate("main_flow") {
+                                popUpTo("auth_flow") { inclusive = true }
+                            }
+                        }
+                    )
+                }
+            }
 
-                ChatDetailScreen(
-                    navController = navController,
-                    chatDetailViewModel = chatDetailViewModel
-                )
+
+            navigation(startDestination = "home_screen", route = "main_flow") {
+
+                composable("home_screen") {
+                    // Bu ekranda kullanılacak ViewModel'leri, bu grafiğin yaşam döngüsüne bağlıyoruz.
+                    val homeViewModel: HomeViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    val commentsViewModel: CommentsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    val connectionsViewModel: ConnectionsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+
+                    HomeScreen(
+                        navController = navController,
+                        homeViewModel = homeViewModel,
+                        commentsViewModel = commentsViewModel,
+                        connectionsViewModel = connectionsViewModel
+                    )
+                }
+                composable("createPost_screen") {
+                    val connectionsViewModel: ConnectionsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    val createPostViewModel: CreatePostViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+
+                    CreatePostScreen(navController, createPostViewModel = createPostViewModel, connectionsViewModel =connectionsViewModel ) // Kendi ViewModel'i var
+                }
+                composable("profile_screen") {
+                    val connectionsViewModel: ConnectionsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    val profileViewModel: ProfileViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    ProfileScreen(navController, connectionsViewModel, profileViewModel)
+                }
+                composable("settings_screen") {
+                    val toggleTheme: () -> Unit = {
+                        scope.launch { themeDataStore.setTheme(!isDarkMode) }
+                    }
+                    SettingsScreen(
+                        navController = navController,
+                        isDarkMode = isDarkMode,
+                        onThemeToggle = toggleTheme
+                    )
+                }
+                composable("messages_screen") {
+                    MessagesScreen(navController)
+                }
+                composable("connections_screen") {
+                    ConnectionsScreen(navController)
+                }
+                composable("chat_screen/{friendId}") { backStackEntry ->
+                    val friendId = backStackEntry.arguments?.getString("friendId") ?: ""
+                    val homeViewModel: HomeViewModel = viewModel(backStackEntry.findViewModelStoreOwner(navController, "main_flow"))
+
+                    val chatDetailViewModel: ChatDetailViewModel = viewModel(
+                        factory = ChatDetailViewModelFactory(friendId = friendId, homeViewModel = homeViewModel)
+                    )
+                    ChatDetailScreen(navController, chatDetailViewModel)
+                }
             }
         }
     }
+}
+
+// ViewModel'i ait olduğu NavGraph'tan bulmak için yardımcı fonksiyon
+@Composable
+fun NavBackStackEntry.findViewModelStoreOwner(navController: NavController, route: String): NavBackStackEntry {
+    return remember(this) { navController.getBackStackEntry(route) }
 }
