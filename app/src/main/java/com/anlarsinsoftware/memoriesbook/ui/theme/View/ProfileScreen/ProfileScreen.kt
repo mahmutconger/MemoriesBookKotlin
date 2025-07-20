@@ -43,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -74,8 +73,7 @@ import kotlinx.coroutines.launch
 fun ProfileScreen(
     navController: NavController,
     connectionsViewModel: ConnectionsViewModel = viewModel(),
-    messagesViewModel: MessagesViewModel = viewModel(),
-    profileViewModel: ProfileViewModel=viewModel()
+    profileViewModel: ProfileViewModel =viewModel()
 ) {
     val currentUser = FirebaseAuth.getInstance().currentUser
     val context = LocalContext.current
@@ -88,7 +86,7 @@ fun ProfileScreen(
     val followers by connectionsViewModel.followers.collectAsState()
     val following by connectionsViewModel.following.collectAsState()
     val requests by connectionsViewModel.pendingRequests.collectAsState()
-    val friends by messagesViewModel.friends.collectAsState()
+    val friends by connectionsViewModel.friends.collectAsState()
 
     val updateUiState by profileViewModel.uiState.collectAsState()
 
