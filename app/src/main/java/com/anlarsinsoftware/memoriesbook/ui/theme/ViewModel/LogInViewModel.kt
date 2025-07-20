@@ -23,6 +23,7 @@ sealed interface LoginUiState {
 
 class LogInViewModel : ViewModel() {
     private val auth = Firebase.auth
+    private val firestore = Firebase.firestore
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
 
@@ -30,7 +31,8 @@ class LogInViewModel : ViewModel() {
         viewModelScope.launch {
             _uiState.value = LoginUiState.Loading
             try {
-                auth.signInWithEmailAndPassword(email, password).await()
+                val result= auth.signInWithEmailAndPassword(email, password).await()
+                result.user?.let { updateUserLastSignIn(it.uid) }
                 _uiState.value = LoginUiState.Success
 
 
@@ -46,7 +48,9 @@ class LogInViewModel : ViewModel() {
             _uiState.value = LoginUiState.Loading
             try {
                 val credential = GoogleAuthProvider.getCredential(idToken, null)
-               auth.signInWithCredential(credential).await()
+                val result = auth.signInWithCredential(credential).await()
+                // GİRİŞ BAŞARILI, ŞİMDİ ZAMANI GÜNCELLE
+                result.user?.let { updateUserLastSignIn(it.uid) }
 
                 _uiState.value = LoginUiState.Success
             } catch (e: Exception) {
@@ -54,6 +58,16 @@ class LogInViewModel : ViewModel() {
                     e.localizedMessage ?: "Google ile giriş sırasında hata oluştu."
                 )
             }
+        }
+    }
+    private suspend fun updateUserLastSignIn(uid: String) {
+        try {
+            firestore.collection("Users").document(uid)
+                .update("lastSignIn", com.google.firebase.Timestamp.now())
+                .await()
+            Log.d("Login", "User last sign-in time updated.")
+        } catch (e: Exception) {
+            Log.w("Login", "Could not update last sign-in time.", e)
         }
     }
 }
