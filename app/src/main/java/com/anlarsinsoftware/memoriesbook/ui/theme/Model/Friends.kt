@@ -5,5 +5,6 @@ class Friends {
 data class FriendProfile(
     val uid: String = "",
     val username: String = "",
-    val photoUrl: String = ""
+    val photoUrl: String = "",
+    val fcmToken: String = ""
 )
