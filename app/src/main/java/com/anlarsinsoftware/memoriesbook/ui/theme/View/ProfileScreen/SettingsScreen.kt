@@ -1,5 +1,10 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -16,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,12 +41,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -57,6 +65,28 @@ fun SettingsScreen(
     onThemeToggle: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+
+    var hasNotificationPermission by remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            mutableStateOf(
+                ContextCompat.checkSelfPermission(
+                    context,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            )
+        } else {
+            mutableStateOf(true)
+        }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasNotificationPermission = isGranted
+        }
+    )
+
     var showSignOutDialog by remember { mutableStateOf(false) }
 
     Scaffold(topBar = {
@@ -106,13 +136,27 @@ fun SettingsScreen(
 
             myCard("Koyu Mod", rowScope = {
                 Switch(
-                    checked = isDarkMode, // Switch'in durumu dışarıdan gelen state'e bağlı
-                    onCheckedChange = { onThemeToggle() } // Değiştiğinde dışarıdan gelen fonksiyonu çağırır
+                    checked = isDarkMode,
+                    onCheckedChange = { onThemeToggle() }
                 )
             })
 
+            myCard("Bildirimler", rowScope = {
+                if (!hasNotificationPermission) {
+                    Button(onClick = {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }) {
+                        Text("İzin Ver")
+                    }
+                } else {
+                    Text("İzin Verildi ✓", color = Color.Green)
+                }
+            })
+
             myCard("Çıkış yap", rowScope = {
-                // 2. Çıkış yap butonuna tıklandığında, diyaloğu göster
+
                 myIconButtonPainter(R.drawable.loginvariant_icon) {
                     showSignOutDialog = true
                 }
@@ -123,7 +167,6 @@ fun SettingsScreen(
     if (showSignOutDialog) {
         AlertDialog(
             onDismissRequest = {
-                // Dışarıya veya geri tuşuna basıldığında diyaloğu kapat
                 showSignOutDialog = false
             },
             title = {
@@ -150,7 +193,6 @@ fun SettingsScreen(
             dismissButton = {
                 TextButton(
                     onClick = {
-                        // Sadece diyaloğu kapat
                         showSignOutDialog = false
                     }
                 ) {
@@ -189,11 +231,4 @@ fun myCard(title: String, rowScope: @Composable () -> Unit) {
 
         }
     }
-}
-
-
-@Preview(showBackground = true)
-@Composable
-private fun prev_setttings() {
-    SettingsScreen(rememberNavController(), true, {})
 }
