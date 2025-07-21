@@ -1,10 +1,12 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Message
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.Query
@@ -24,13 +26,6 @@ data class FriendProfile(
     val username: String = "",
     val photoUrl: String = "",
     val lastSignIn: com.google.firebase.Timestamp? = null
-)
-
-// Bir mesajı temsil eden data class
-data class Message(
-    val senderId: String = "",
-    val text: String = "",
-    val timestamp: com.google.firebase.Timestamp = com.google.firebase.Timestamp.now()
 )
 
 
@@ -74,21 +69,48 @@ class ChatDetailViewModel(
             }
     }
 
+    fun sendMessage(text: String) {
+        val currentUser = auth.currentUser
+        if (currentUser == null || text.isBlank()) {
+            return // Kullanıcı giriş yapmamışsa veya mesaj boşsa gönderme
+        }
+
+        val chatRoomId = getChatRoomId(currentUser.uid, friendId)
+        val messageRef = firestore.collection("chats").document(chatRoomId).collection("messages")
+
+        val message = Message(
+            senderId = currentUser.uid,
+            text = text
+            // timestamp, @ServerTimestamp sayesinde otomatik eklenecek
+        )
+
+        // Yeni mesajı Firestore'a ekliyoruz.
+        messageRef.add(message)
+            .addOnSuccessListener {
+                Log.d("SendMessage", "Message sent successfully!")
+            }
+            .addOnFailureListener { e ->
+                Log.e("SendMessage", "Error sending message", e)
+            }
+    }
+
+    // fetchMessages fonksiyonundaki chatRoomId mantığını bir yardımcı fonksiyona taşıyalım
+    private fun getChatRoomId(uid1: String, uid2: String): String {
+        return if (uid1 > uid2) "${uid1}_$uid2" else "${uid2}_$uid1"
+    }
+
     private fun fetchMessages() {
         val currentUser = auth.currentUser ?: return
-
-        // İki kullanıcı arasında her zaman aynı olan benzersiz bir sohbet odası ID'si oluşturuyoruz
-        val chatRoomId = if (currentUser.uid > friendId) {
-            "${currentUser.uid}_$friendId"
-        } else {
-            "${friendId}_${currentUser.uid}"
-        }
+        val chatRoomId = getChatRoomId(currentUser.uid, friendId)
 
         firestore.collection("chats").document(chatRoomId).collection("messages")
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { value, error ->
                 if (value != null) {
-                    _messages.value = value.toObjects(Message::class.java)
+                    // documentId'yi de alarak map'leyelim
+                    _messages.value = value.documents.map { doc ->
+                        doc.toObject(Message::class.java)!!.copy(messageId = doc.id)
+                    }
                 }
             }
     }
