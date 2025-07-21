@@ -1,8 +1,9 @@
 // onCall ve setGlobalOptions fonksiyonlarını doğru paketlerden içe aktarıyoruz.
 const {onCall} = require("firebase-functions/v2/https");
 const {setGlobalOptions} = require("firebase-functions/v2");
-const {onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore"); 
 const admin = require("firebase-admin");
+
 
 // Firebase Admin SDK'sını başlatıyoruz.
 // Bu, Cloud Function'ımızın Firestore ve Auth gibi servislere erişmesini sağlar.
@@ -94,5 +95,63 @@ exports.updateFriendsOnFollow = onDocumentUpdated("Users/{userId}", async (event
     console.log("Arkadaş listeleri başarıyla güncellendi (çıkarma).");
   }
 
+  return null;
+});
+
+//BİLDİRİM MEKANİZMASI
+
+
+exports.sendChatNotification = onDocumentCreated("chats/{chatRoomId}/messages/{messageId}", async (event) => {
+  const messageData = event.data.data();
+  const chatRoomId = event.params.chatRoomId;
+  
+  const senderId = messageData.senderId;
+  const receiverId = chatRoomId.replace(senderId, "").replace("_", "");
+  
+  if (!receiverId) {
+    console.log("Alıcı ID'si bulunamadı.");
+    return null;
+  }
+
+  // 1. Alıcının dökümanını okuyup FCM token'ını al.
+  const receiverDoc = await db.collection("Users").doc(receiverId).get();
+  if (!receiverDoc.exists || !receiverDoc.data().fcmToken) {
+    console.log("Alıcının token'ı bulunamadı.");
+    return null;
+  }
+  const fcmToken = receiverDoc.data().fcmToken;
+
+  // 2. Gönderenin profilinden kullanıcı adını al.
+  const senderDoc = await db.collection("Users").doc(senderId).get();
+  const senderName = senderDoc.data().username || "Birisi";
+  
+  // --- DEĞİŞİKLİK BURADA: BİLDİRİM PAKETİNİN DOĞRU YAPISI ---
+  const message = {
+    // Bu 'notification' ve 'data' alanları, paketin en üst seviyesinde olabilir.
+    notification: {
+      title: senderName,
+      body: messageData.text,
+    },
+    data: {
+      "click_action": "FLUTTER_NOTIFICATION_CLICK",
+      "chat_partner_id": senderId,
+    },
+    // 'android' gibi platforma özel ayarlar, en üst seviyede bu şekilde belirtilir.
+    android: {
+      notification: {
+        sound: "default",
+        channel_id: "chat_messages_channel", // Android 8+ için kanal ID'miz
+      },
+    },
+    token: fcmToken, // Hedef cihazın token'ı
+  };
+
+  // 4. Bildirimi 'sendToDevice' yerine 'send' ile gönder!
+  try {
+    await admin.messaging().send(message); // sendToDevice(token, payload) yerine send(message)
+    console.log("Bildirim başarıyla gönderildi.");
+  } catch (error) {
+    console.error("Bildirim gönderme hatası:", error);
+  }
   return null;
 });
