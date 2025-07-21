@@ -16,6 +16,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        intent.extras?.let {
+            val chatPartnerId = it.getString("chat_partner_id")
+            // Eğer bildirimden geliyorsa, başlangıç rotasını ayarla (bu kısım NavController'a iletilmeli)
+            // Bu, 'AppNavigation'da bir başlangıç argümanı olarak ele alınabilir.
+        }
         enableEdgeToEdge()
         setContent {
             MemoriesBookTheme {
