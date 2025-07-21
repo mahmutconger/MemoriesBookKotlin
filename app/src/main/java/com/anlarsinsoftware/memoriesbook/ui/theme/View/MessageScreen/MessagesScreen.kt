@@ -130,7 +130,6 @@ fun MessagesScreen(navController: NavController,
                     FriendItem(
                         friend = friend,
                         onClick = {
-                            // Tıklandığında o kişiye özel sohbet ekranına git
                             navController.navigate("chat_screen/${friend.uid}")
                         }
                     )
