@@ -1,12 +1,15 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.Model
 
+import retrofit2.http.Url
+
 class ConnectionsModel {
 }
 // Arayüzde gösterilecek kullanıcı modeli
 data class SearchResultUser(
     val uid: String = "",
     val username: String = "",
-    val email: String = ""
+    val email: String = "",
+    val photoUrl: String=""
     // İsteğe bağlı olarak requestStatus: "sent", "friends", "none" gibi bir alan eklenebilir
 )
 
