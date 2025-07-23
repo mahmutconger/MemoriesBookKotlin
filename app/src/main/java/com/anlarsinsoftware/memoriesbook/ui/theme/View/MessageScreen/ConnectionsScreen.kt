@@ -1,11 +1,14 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -23,16 +26,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Card
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.SearchResultUser
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 
 
@@ -48,7 +57,7 @@ fun ConnectionsScreen(
 
     Scaffold(
         topBar = {
-            // Arama çubuğunu TopAppBar'ın içine koymak daha iyi bir tasarım olabilir
+
             TopAppBar(title = {
                 OutlinedTextField(
                     value = searchQuery,
@@ -89,6 +98,17 @@ fun UserItem(user: SearchResultUser, onAddFriendClicked: () -> Unit) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            AsyncImage(
+                model = user.photoUrl,
+                "Profil resmi",
+                error = painterResource(id = R.drawable.default_user),
+                placeholder = painterResource(id = R.drawable.default_user),
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(CircleShape)
+                    .border(2.dp, myBrush(), CircleShape)
+            )
+            Spacer(Modifier.weight(0.1f))
             Column(modifier = Modifier.weight(1f)) {
                 Text(user.username, fontWeight = FontWeight.Bold)
                 Text(user.email, style = MaterialTheme.typography.bodySmall)
