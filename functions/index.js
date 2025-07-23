@@ -1,5 +1,6 @@
 // onCall ve setGlobalOptions fonksiyonlarını doğru paketlerden içe aktarıyoruz.
 const {onCall} = require("firebase-functions/v2/https");
+const {onRequest} = require("firebase-functions/v2/https"); 
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore"); 
 const admin = require("firebase-admin");
@@ -154,4 +155,84 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatRoomId}/messages/{m
     console.error("Bildirim gönderme hatası:", error);
   }
   return null;
+});
+
+exports.migratePostsData =  onRequest(async (request, response) => {
+  console.log("Post veri taşıma script'i başlatıldı.");
+
+
+  const postsRef = db.collection("posts");
+  const snapshot = await postsRef.get();
+
+  if (snapshot.empty) {
+    console.log("Güncellenecek post bulunamadı.");
+    return {message: "Güncellenecek post bulunamadı."};
+  }
+
+  // Firestore'da batch (toplu yazma) en fazla 500 işlem alabilir.
+  // Binlerce dökümanın varsa bu kodu parçalara bölmen gerekebilir.
+  // Şimdilik tek bir batch ile yapıyoruz.
+  const batch = db.batch();
+  let updatedCount = 0;
+
+  snapshot.forEach((doc) => {
+    const postData = doc.data();
+    const updates = {}; // Bu döküman için yapılacak güncellemeleri tutan obje
+
+    // --- ESKİ'den YENİ'ye DÖNÜŞÜM MANTIĞI BURADA ---
+
+    // 1. downloadurl -> mediaUrls dönüşümü
+    if (postData.downloadurl && !postData.mediaUrls) {
+      updates.mediaUrls = [postData.downloadurl]; // Tek URL'yi bir diziye koy
+      updates.mediaType = "image"; // Varsayılan olarak image diyelim
+    }
+    
+    // 2. Eksik 'authorId' alanı için varsayılan atama
+    if (!postData.authorId) {
+      // Bu alanı manuel olarak doldurman gerekebilir, şimdilik boş bırakıyoruz
+      // veya bir varsayılan değer atayabiliriz.
+      updates.authorId = "ysBHhImH3yR0meZYqCRsEHdoDv63";
+    }
+
+    // 3. Eksik 'visibility' alanı için varsayılan atama
+    if (!postData.visibility) {
+      updates.visibility = "public";
+    }
+    
+    // 4. Eksik 'visibleTo' alanı için varsayılan atama
+     if (!postData.visibleTo) {
+      updates.visibleTo = [];
+    }
+
+    // 5. isLiked -> likedBy dönüşümü
+    if (postData.isLiked !== undefined && !postData.likedBy) {
+       updates.likedBy = []; // Başlangıçta boş bir dizi
+    }
+
+    // 6. Eksik 'commentCount' alanı
+    if (postData.commentCount === undefined) {
+        updates.commentCount = 0;
+    }
+
+
+    // Eğer bu döküman için en az bir güncelleme varsa, batch'e ekle
+    if (Object.keys(updates).length > 0) {
+      batch.update(doc.ref, updates);
+      updatedCount++;
+
+      // İsteğe bağlı: Eski ve artık kullanılmayan alanları silebiliriz
+      // batch.update(doc.ref, {
+      //   downloadurl: admin.firestore.FieldValue.delete(),
+      //   isLiked: admin.firestore.FieldValue.delete(),
+      // });
+    }
+  });
+
+  // Tüm güncellemeleri tek bir işlemde Firestore'a gönder
+  await batch.commit();
+
+  const resultMessage = `${updatedCount} adet post dökümanı başarıyla güncellendi.`;
+  console.log(resultMessage);
+  response.status(200).send({message: resultMessage}); 
+  return {message: resultMessage};
 });
