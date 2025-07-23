@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
+import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButton
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
@@ -117,6 +119,8 @@ fun ProfileScreen(
             AsyncImage(
                 model = currentUser?.photoUrl,
                 "Profil resmi",
+                error = painterResource(id = R.drawable.default_user),
+                placeholder = painterResource(id = R.drawable.default_user),
                 modifier = Modifier
                     .size(125.dp)
                     .clip(CircleShape)
@@ -384,10 +388,11 @@ fun EditProfileContent(
         Text("Profili Düzenle", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Kullanıcı yeni bir resim seçtiyse onu, seçmediyse eskisini gösterir.
         AsyncImage(
             model = newImageUri ?: currentPhotoUri,
             contentDescription = "Profil Fotoğrafı",
+            error = painterResource(id = R.drawable.default_user),
+            placeholder = painterResource(id = R.drawable.default_user),
             modifier = Modifier
                 .size(100.dp)
                 .clip(CircleShape)
