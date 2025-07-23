@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
@@ -39,7 +39,9 @@ fun CreatePostScreen(
 ) {
     val context = LocalContext.current
 
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var imageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var videoUri by remember { mutableStateOf<Uri?>(null) }
+    var showMediaChoiceDialog by remember { mutableStateOf(false) }
     var comment by remember { mutableStateOf("") }
     var visibility by remember { mutableStateOf("public") }
     var visibleToList by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -49,10 +51,19 @@ fun CreatePostScreen(
     val friends by connectionsViewModel.friends.collectAsState()
     val followers by connectionsViewModel.followers.collectAsState()
 
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
+    val multiplePhotoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(5),
+        onResult = { uris ->
+            videoUri = null
+            imageUris = uris
+        }
+    )
+    val videoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
-        onResult = { uri -> uri?.let { imageUri = it } }
+        onResult = { uri ->
+            imageUris = emptyList()
+            videoUri = uri
+        }
     )
 
     LaunchedEffect(key1 = uiState) {
@@ -85,7 +96,7 @@ fun CreatePostScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri Git")
                     }
                 },
-                actions = { Spacer(modifier = Modifier.width(48.dp)) } // Başlığı ortalamak için boş bir alan
+                actions = { Spacer(modifier = Modifier.width(48.dp)) }
             )
         }
     ) { innerPadding ->
@@ -97,35 +108,22 @@ fun CreatePostScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                modifier = Modifier.fillMaxWidth().height(250.dp).clip(RoundedCornerShape(12.dp))
                     .border(1.dp, Color.Gray, RoundedCornerShape(12.dp))
-                    .clickable {
-                        // Artık doğrudan modern picker'ı başlatıyoruz, izin isteme işini sistem hallediyor.
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
+                    .clickable { showMediaChoiceDialog = true },
                 contentAlignment = Alignment.Center
             ) {
-                if (imageUri == null) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.Face,
-                            contentDescription = null,
-                            modifier = Modifier.size(60.dp)
-                        )
-                        Text("Resim Seçmek İçin Tıkla")
-                    }
-                } else {
+                if (videoUri != null) {
+                    Icon(Icons.Default.Check, contentDescription = "Video Seçildi", modifier = Modifier.size(80.dp))
+                } else if (imageUris.isNotEmpty()) {
                     AsyncImage(
-                        model = imageUri,
-                        contentDescription = "Seçilen Resim",
+                        model = imageUris.first(),
+                        contentDescription = "Seçilen Resimler (${imageUris.size})",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
+                } else {
+                    Text("Medya Seçmek İçin Tıkla")
                 }
             }
 
@@ -160,22 +158,22 @@ fun CreatePostScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f)) // Paylaş butonunu en alta iter
+            Spacer(modifier = Modifier.weight(1f))
 
             // --- PAYLAŞ BUTONU ---
             Button(
                 onClick = {
-                    imageUri?.let { uri ->
-                        createPostViewModel.createPost(uri, comment, visibility, visibleToList)
-                    } ?: run {
-                        Toast.makeText(context, "Lütfen bir resim seçin.", Toast.LENGTH_SHORT)
-                            .show()
+                    val urisToUpload = if (imageUris.isNotEmpty()) imageUris else videoUri?.let { listOf(it) }
+                    val mediaType = if (imageUris.isNotEmpty()) "image" else "video"
+
+                    if (!urisToUpload.isNullOrEmpty()) {
+                        createPostViewModel.createPost(urisToUpload, comment, mediaType, visibility, visibleToList)
+                    } else {
+                        Toast.makeText(context, "Lütfen bir fotoğraf veya video seçin.", Toast.LENGTH_SHORT).show()
                     }
                 },
                 enabled = uiState !is UploadUiState.Loading,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp)
+                modifier = Modifier.fillMaxWidth().height(50.dp)
             ) {
                 if (uiState is UploadUiState.Loading) {
                     CircularProgressIndicator(
@@ -197,6 +195,35 @@ fun CreatePostScreen(
                     onSelectionDone = { selectedIds ->
                         visibleToList = selectedIds
                         showFriendSelector = false
+                    }
+                )
+            }
+
+            if (showMediaChoiceDialog) {
+                AlertDialog(
+                    onDismissRequest = { showMediaChoiceDialog = false },
+                    title = { Text("Medya Türü Seç") },
+                    text = { Text("Ne paylaşmak istersin?") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showMediaChoiceDialog = false
+                            multiplePhotoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+
+                                )
+                            )
+                        }) { Text("Fotoğraf (Çoklu)") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = {
+                            showMediaChoiceDialog = false
+                            videoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+                                    // DOĞRU YOL: Tam adını kullanıyoruz
+                                    ActivityResultContracts.PickVisualMedia.VideoOnly
+                                )
+                            )
+                        }) { Text("Video") }
                     }
                 )
             }

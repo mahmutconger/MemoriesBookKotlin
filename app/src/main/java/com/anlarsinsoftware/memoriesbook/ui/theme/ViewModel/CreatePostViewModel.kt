@@ -8,6 +8,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,13 +34,14 @@ sealed interface UploadUiState {
     val uiState: StateFlow<UploadUiState> = _uiState.asStateFlow()
 
     fun createPost(
-        imageUri: Uri,
+        mediaUris: List<Uri>,
         comment: String,
-        visibility: String, // "public" veya "private"
-        visibleTo: List<String> // Özelse, kimlerin göreceği
+        mediaType: String,
+        visibility: String,
+        visibleTo: List<String>
     ) {
         viewModelScope.launch {
-            _uiState.value = UploadUiState.Loading // Yükleme başladı
+            _uiState.value = UploadUiState.Loading
 
             val user = auth.currentUser
             if (user == null) {
@@ -47,29 +50,32 @@ sealed interface UploadUiState {
             }
 
             try {
-                // 1. Resmi Firebase Storage'a yükle
-                val imageName = "images/${UUID.randomUUID()}.jpg"
-                val downloadUrl = storage.reference.child(imageName)
-                    .putFile(imageUri).await() // .await() ile callback beklemeden sonucu al
-                    .storage.downloadUrl.await() // Yüklenen resmin URL'sini al
-                    .toString()
+                val downloadUrls = mediaUris.map { uri ->
+                    async {
+                        val fileExtension = if (mediaType == "video") "mp4" else "jpg"
+                        val fileName = "media/${UUID.randomUUID()}.$fileExtension"
+                        storage.reference.child(fileName).putFile(uri).await()
+                            .storage.downloadUrl.await().toString()
+                    }
+                }.awaitAll()
 
-                // 2. Post verisini hazırla
                 val postData = hashMapOf(
                     "authorId" to user.uid,
                     "useremail" to user.email,
-                    "downloadurl" to downloadUrl,
+                    "username" to user.displayName,
+                    "userPhoto" to user.photoUrl,
                     "comment" to comment,
                     "date" to Timestamp.now(),
+                    "mediaType" to mediaType,
+                    "mediaUrls" to downloadUrls,
                     "visibility" to visibility,
-                    "visibleTo" to if (visibility == "private") visibleTo else emptyList()
+                    "visibleTo" to if (visibility == "private") visibleTo else emptyList(),
+                    "likedBy" to emptyList<String>(),
+                    "commentCount" to 0
                 )
 
-                // 3. Post verisini Firestore'a kaydet
                 firestore.collection("posts").add(postData).await()
-
-                _uiState.value = UploadUiState.Success // İşlem başarılı
-
+                _uiState.value = UploadUiState.Success
             } catch (e: Exception) {
                 _uiState.value = UploadUiState.Error(e.localizedMessage ?: "Bilinmeyen bir hata oluştu.")
             }
