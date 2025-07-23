@@ -8,12 +8,12 @@ data class Posts(
     val authorId: String = "",
     val useremail: String = "",
     val comment: String = "",
-    @get:PropertyName("downloadurl") @set:PropertyName("downloadurl")
-    var downloadUrl: String = "",
     val date: Timestamp? = null,
     val visibility: String = "public",
     val visibleTo: List<String> = emptyList(),
     val commentCount: Long = 0,
     val likedBy: List<String> = emptyList(),
+    val mediaType: String = "image",
+    val mediaUrls: List<String> = emptyList(),
     var documentId: String = "" // documentId için de varsayılan değer eklemek iyidir.
 )
