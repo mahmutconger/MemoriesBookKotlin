@@ -40,8 +40,7 @@ fun CommentBottomSheetContent(
     commentList: List<Comments>,
     onHide: () -> Unit,
     onCommentLikeClicked: (Comments) -> Unit,
-    onAddCommentClicked: (String) -> Unit,
-    onShowCommentLikers: (Comments) -> Unit
+    onAddCommentClicked: (String) -> Unit
 ) {
     var commentTextState by remember { mutableStateOf("") }
     val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
@@ -95,9 +94,7 @@ fun CommentBottomSheetContent(
             )
             Spacer(modifier = Modifier.width(8.dp))
             IconButton(onClick = {
-                // ViewModel'deki fonksiyonu çağırıyoruz
                 onAddCommentClicked(commentTextState)
-                // Yorumu gönderdikten sonra metin alanını temizliyoruz
                 commentTextState = ""
             }) {
                 Icon(Icons.Default.Send, contentDescription = "Yorumu Gönder")
@@ -130,7 +127,8 @@ fun CommentItem(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape),
-                error = painterResource(id = R.drawable.person_ico)
+                error = painterResource(id = R.drawable.default_user),
+                placeholder = painterResource(id = R.drawable.default_user)
             )
             Spacer(modifier = Modifier.width(8.dp))
 
@@ -152,8 +150,8 @@ fun CommentItem(
         Spacer(modifier = Modifier.height(4.dp))
         ExpandableText(
             text = comment.comment,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp), // Mevcut stili koru
-            collapsedMaxLines = 2 // Yorumlar daha kısa olduğu için 2 satırda kesebiliriz
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+            collapsedMaxLines = 2
         )
 
         Row(
