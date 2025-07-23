@@ -19,6 +19,7 @@ import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.* // View altındaki her şeyi import et
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.CreatePostScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.*
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.MediaViewerScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.*
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.ProfileScreen.*
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.*
@@ -77,9 +78,26 @@ fun AppNavigation() {
                         navController = navController,
                         homeViewModel = homeViewModel,
                         commentsViewModel = commentsViewModel,
-                        connectionsViewModel = connectionsViewModel
+                        connectionsViewModel = connectionsViewModel,
+
                     )
                 }
+
+                composable("media_viewer/{postId}/{initialIndex}") { backStackEntry ->
+                    val postId = backStackEntry.arguments?.getString("postId") ?: ""
+                    val initialIndex = backStackEntry.arguments?.getString("initialIndex")?.toIntOrNull() ?: 0
+
+                    val mainGraphEntry = remember(backStackEntry) { navController.getBackStackEntry("main_flow") }
+                    val homeViewModel: HomeViewModel = viewModel(mainGraphEntry)
+
+                    MediaViewerScreen(
+                        navController = navController,
+                        homeViewModel = homeViewModel,
+                        postId = postId,
+                        initialIndex = initialIndex
+                    )
+                }
+
                 composable("createPost_screen") {
                     val connectionsViewModel: ConnectionsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
                     val createPostViewModel: CreatePostViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
