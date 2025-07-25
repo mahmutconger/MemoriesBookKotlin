@@ -15,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
@@ -72,7 +71,11 @@ fun MediaViewerScreen(
                         }
                     }
                     "video" -> {
-                        VideoPlayer(videoUrl = it.mediaUrls.firstOrNull(), modifier = Modifier.fillMaxSize())
+                        VideoPlayer(
+                            videoUrl = it.mediaUrls.firstOrNull(),
+                            modifier = Modifier.fillMaxSize(),
+                            autoPlay = true 
+                        )
                     }
                 }
             }
