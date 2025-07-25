@@ -157,82 +157,46 @@ exports.sendChatNotification = onDocumentCreated("chats/{chatRoomId}/messages/{m
   return null;
 });
 
-exports.migratePostsData =  onRequest(async (request, response) => {
-  console.log("Post veri taşıma script'i başlatıldı.");
 
+exports.onUserUpdate = onDocumentUpdated("Users/{userId}", async (event) => {
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
 
-  const postsRef = db.collection("posts");
-  const snapshot = await postsRef.get();
-
-  if (snapshot.empty) {
-    console.log("Güncellenecek post bulunamadı.");
-    return {message: "Güncellenecek post bulunamadı."};
+  // Eğer username veya photoUrl değişmediyse, bir şey yapma.
+  if (beforeData.username === afterData.username && beforeData.photoUrl === afterData.photoUrl) {
+    console.log("Kullanıcı bilgisi değişmedi, güncelleme yapılmadı.");
+    return null;
   }
 
-  // Firestore'da batch (toplu yazma) en fazla 500 işlem alabilir.
-  // Binlerce dökümanın varsa bu kodu parçalara bölmen gerekebilir.
-  // Şimdilik tek bir batch ile yapıyoruz.
+  const userId = event.params.userId;
+  const newUsername = afterData.username;
+  const newPhotoUrl = afterData.photoUrl;
+  
   const batch = db.batch();
-  let updatedCount = 0;
 
-  snapshot.forEach((doc) => {
-    const postData = doc.data();
-    const updates = {}; // Bu döküman için yapılacak güncellemeleri tutan obje
-
-    // --- ESKİ'den YENİ'ye DÖNÜŞÜM MANTIĞI BURADA ---
-
-    // 1. downloadurl -> mediaUrls dönüşümü
-    if (postData.downloadurl && !postData.mediaUrls) {
-      updates.mediaUrls = [postData.downloadurl]; // Tek URL'yi bir diziye koy
-      updates.mediaType = "image"; // Varsayılan olarak image diyelim
-    }
-    
-    // 2. Eksik 'authorId' alanı için varsayılan atama
-    if (!postData.authorId) {
-      // Bu alanı manuel olarak doldurman gerekebilir, şimdilik boş bırakıyoruz
-      // veya bir varsayılan değer atayabiliriz.
-      updates.authorId = "ysBHhImH3yR0meZYqCRsEHdoDv63";
-    }
-
-    // 3. Eksik 'visibility' alanı için varsayılan atama
-    if (!postData.visibility) {
-      updates.visibility = "public";
-    }
-    
-    // 4. Eksik 'visibleTo' alanı için varsayılan atama
-     if (!postData.visibleTo) {
-      updates.visibleTo = [];
-    }
-
-    // 5. isLiked -> likedBy dönüşümü
-    if (postData.isLiked !== undefined && !postData.likedBy) {
-       updates.likedBy = []; // Başlangıçta boş bir dizi
-    }
-
-    // 6. Eksik 'commentCount' alanı
-    if (postData.commentCount === undefined) {
-        updates.commentCount = 0;
-    }
-
-
-    // Eğer bu döküman için en az bir güncelleme varsa, batch'e ekle
-    if (Object.keys(updates).length > 0) {
-      batch.update(doc.ref, updates);
-      updatedCount++;
-
-      // İsteğe bağlı: Eski ve artık kullanılmayan alanları silebiliriz
-      // batch.update(doc.ref, {
-      //   downloadurl: admin.firestore.FieldValue.delete(),
-      //   isLiked: admin.firestore.FieldValue.delete(),
-      // });
-    }
+  // 1. Adım: Bu kullanıcının tüm postlarını bul ve güncelleme için batch'e ekle.
+  const postsQuery = db.collection("posts").where("authorId", "==", userId);
+  const postsSnapshot = await postsQuery.get();
+  postsSnapshot.forEach((doc) => {
+    batch.update(doc.ref, {
+      authorUsername: newUsername,
+      authorPhotoUrl: newPhotoUrl,
+    });
   });
 
-  // Tüm güncellemeleri tek bir işlemde Firestore'a gönder
-  await batch.commit();
+  // 2. Adım: Bu kullanıcının tüm yorumlarını bul (Collection Group Query) ve güncelle.
+  // Bu, veritabanındaki TÜM 'comments' alt koleksiyonlarını tarar.
+  const commentsQuery = db.collectionGroup("comments").where("userId", "==", userId);
+  const commentsSnapshot = await commentsQuery.get();
+  commentsSnapshot.forEach((doc) => {
+    batch.update(doc.ref, {
+      username: newUsername,
+      userPhotoUrl: newPhotoUrl,
+    });
+  });
 
-  const resultMessage = `${updatedCount} adet post dökümanı başarıyla güncellendi.`;
-  console.log(resultMessage);
-  response.status(200).send({message: resultMessage}); 
-  return {message: resultMessage};
+  // 3. Adım: Tüm güncellemeleri tek seferde yap.
+  await batch.commit();
+  console.log(`Kullanıcı ${userId} için ${postsSnapshot.size} post ve ${commentsSnapshot.size} yorum güncellendi.`);
+  return null;
 });
