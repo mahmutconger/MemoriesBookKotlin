@@ -1,6 +1,7 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.HomeLazyItems
 
 import VideoPlayer
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,15 +10,19 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -50,7 +55,9 @@ import com.google.firebase.auth.auth
 @Composable
 fun LikersItem(photoUrl: String, userName: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(10.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
@@ -76,6 +83,7 @@ fun LikersItem(photoUrl: String, userName: String) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PostItem(
     post: Posts,
@@ -103,9 +111,22 @@ fun PostItem(
 
             Row(Modifier.fillMaxWidth()) {
 
-                Column() {
-                    Text(text = post.useremail, fontWeight = FontWeight.Bold)
-                    val formattedDate =rememberFormattedTimestamp(timestamp = post.date)
+                AsyncImage(
+                    model = post.authorPhotoUrl,
+                    contentDescription = "${post.authorUsername} profil fotoğrafı",
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape),
+                    error = painterResource(id = R.drawable.default_user),
+                    placeholder = painterResource(id = R.drawable.default_user)
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+
+                    Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
+                    val formattedDate = rememberFormattedTimestamp(timestamp = post.date)
                     Text(
                         formattedDate,
                         fontSize = 12.sp,
@@ -128,15 +149,19 @@ fun PostItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val mediaContainerModifier = Modifier
+                .fillMaxWidth() // Genişlik her zaman ekranı kaplasın
+                .height(500.dp) // Yükseklik her zaman 500.dp olsun
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.Black) // Resim tam sığmazsa arkaplan siyah olsun
+
             when (post.mediaType) {
                 "image" -> {
                     Box(contentAlignment = Alignment.TopEnd) {
                         val pagerState = rememberPagerState(pageCount = { post.mediaUrls.size })
                         HorizontalPager(
                             state = pagerState,
-                            modifier = Modifier
-                                .height(400.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                            modifier = mediaContainerModifier
                         ) { page ->
                             AsyncImage(
                                 model = post.mediaUrls[page],
@@ -144,7 +169,8 @@ fun PostItem(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clickable { onMediaClick(post, page) },
-                                contentScale = ContentScale.Crop
+                                contentScale =  ContentScale.Fit,
+                                placeholder =painterResource(id = R.drawable.ic_star)
                             )
                         }
                         if (post.mediaUrls.size > 1) {
@@ -163,30 +189,35 @@ fun PostItem(
                         }
                     }
                 }
-
                 "video" -> {
-                    Box(contentAlignment = Alignment.Center) {
-                        VideoPlayer(
-                            videoUrl = post.mediaUrls.firstOrNull(), modifier = Modifier.padding()
+                    Box(
+                        modifier = mediaContainerModifier
+                            .clickable { onMediaClick(post, 0) },
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        AsyncImage(
+                            // DİKKAT: 'model' olarak post.mediaUrls.firstOrNull() yerine
+                            // post.thumbnailUrl kullandığından emin ol.
+                            model = post.thumbnailUrl,
+                            contentDescription = "Video Kapağı",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                            // Eğer URL boşsa veya yüklenemezse varsayılan bir resim göster
+                            placeholder = painterResource(id = R.drawable.default_user),
+                            error = painterResource(id = R.drawable.default_user)
                         )
-                        IconButton(
-                            onClick = {
-                                post.mediaUrls.firstOrNull()?.let { onVideoFullScreen(it) }
-                            },
-                            modifier = Modifier.background(
-                                Color.Black.copy(alpha = 0.5f),
-                                CircleShape
-                            )
-                        ) {
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_fullscreen),
-                                contentDescription = "Tam Ekran",
-                                tint = Color.White
-                            )
-                        }
+
+                        Icon(
+                            painterResource(R.drawable.ic_play_video),
+                            contentDescription = "Videoyu Oynat",
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.White.copy(alpha = 0.9f)
+                        )
                     }
                 }
             }
+
 
             Spacer(modifier = Modifier.height(8.dp))
 
