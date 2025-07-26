@@ -29,7 +29,9 @@ import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ExpandableText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButtonPainter
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.rememberFormattedTimestamp
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import java.util.Locale
@@ -111,57 +113,85 @@ fun CommentItem(
     onShowLikersClick: () -> Unit
 ) {
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(5.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
-        ) {
+        AsyncImage(
+            model = comment.userPhotoUrl,
+            contentDescription = "${comment.username} profil fotoğrafı",
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape),
+            error = painterResource(id = R.drawable.default_user),
+            placeholder = painterResource(id = R.drawable.default_user)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
 
-            AsyncImage(
-                model = comment.userPhotoUrl,
-                contentDescription = "${comment.username} profil fotoğrafı",
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape),
-                error = painterResource(id = R.drawable.default_user),
-                placeholder = painterResource(id = R.drawable.default_user)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
+        Column {
+            // 2. Başlık Satırı: İsim ve tarih
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(comment.username, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                val formattedDate = remember(comment.date) {
-                    try {
-                        val sdf = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-                        sdf.format(comment.date.toDate())
-                    } catch (e: Exception) {
-                        "Tarih bilgisi yok"
-                    }
-                }
+                Spacer(Modifier.weight(1f)) // Aradaki tüm boşluğu doldurarak tarihi en sağa iter
+                val formattedDate = rememberFormattedTimestamp(comment.date)
                 Text(formattedDate, fontSize = 12.sp, color = Color.Gray)
             }
 
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // 3. Yorum Metni
+            ExpandableText(
+                text = comment.comment,
+                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                collapsedMaxLines = 4 // Biraz daha fazla satır gösterebiliriz
+            )
+
+            // 4. Aksiyon Satırı: Yanıtla, Beğen butonu ve sayısı
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp) // Butonlar arasına boşluk
+            ) {
+                Text(
+                    text = "Yanıtla",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Gray,
+                    modifier = Modifier.clickable { /* TODO: Yanıtlama mantığı eklenecek */ }
+                )
+
+                val isLikedByMe = currentUserId in comment.likedBy
+                val likeIcon = if (isLikedByMe) R.drawable.like_selected else R.drawable.like_unselected
+
+                myImageButton (
+                    id = likeIcon,
+                    imageSize = 20,
+                    onClick = onLikeClick
+                )
+
+                if (comment.likedBy.isNotEmpty()) {
+                    Text(
+                        text = "${comment.likedBy.size}",
+                        modifier = Modifier.clickable(onClick = onShowLikersClick),
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
+    }
+}
 
-        Spacer(modifier = Modifier.height(4.dp))
-        ExpandableText(
-            text = comment.comment,
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
-            collapsedMaxLines = 2
-        )
 
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val isLikedByMe = currentUserId in comment.likedBy
+/*
+val isLikedByMe = currentUserId in comment.likedBy
             val likeIcon = if (isLikedByMe) R.drawable.like_selected else R.drawable.like_unselected
 
-            myImageButton(id = likeIcon, imageSize = 25, onClick = onLikeClick)
+            myIconButtonPainter(resourcesId = likeIcon, imageSize = 25, onClick = onLikeClick)
 
             if (comment.likedBy.isNotEmpty()) {
                 Text(
@@ -176,10 +206,8 @@ fun CommentItem(
             }
 
             Spacer(Modifier.weight(1f))
-        }
 
 
-    }
-}
+             */
 
 
