@@ -11,6 +11,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -212,7 +213,6 @@ fun BottomNavigationBar(
     profileClick: () -> Unit,
     homeClick: () -> Unit,
     messageClick: () -> Unit,
-    homeTint: Color = MaterialTheme.colorScheme.primary,
     bgColorProfile: Color = Color.Transparent,
     bgColorCreatePost: Color = Color.Transparent,
     bgColorMessage: Color = Color.Transparent,
@@ -227,30 +227,27 @@ fun BottomNavigationBar(
         horizontalArrangement = Arrangement.SpaceAround
     ) {
 
-        myImageButton(
-            id = R.drawable.home_icon,
-            tintColor = homeTint
+        myIconButtonPainter (
+            resourcesId = R.drawable.home_icon,
+            tintColor = MaterialTheme.colorScheme.primary
         ) {
             homeClick()
         }
-        myImageButton(
-            id = R.drawable.person_ico,
-            tintColor = MaterialTheme.colorScheme.primary,
-            bgColor = bgColorProfile
+        myIconButtonPainter(
+            resourcesId = R.drawable.person_ico,
+            tintColor = MaterialTheme.colorScheme.primary
         ) {
             profileClick()
         }
-        myImageButton(
-            id = R.drawable.add_post,
-            tintColor = MaterialTheme.colorScheme.primary,
-            bgColor = bgColorCreatePost
+        myIconButtonPainter(
+            resourcesId = R.drawable.add_post,
+            tintColor = MaterialTheme.colorScheme.primary
         ) {
             createPostClick()
         }
-        myImageButton(
-            id = R.drawable.message_circle2,
-            tintColor = MaterialTheme.colorScheme.primary,
-            bgColor = bgColorMessage
+        myIconButtonPainter(
+            resourcesId = R.drawable.message_circle2,
+            tintColor = MaterialTheme.colorScheme.primary
         ) {
             messageClick()
         }
@@ -319,7 +316,8 @@ fun MyScaffold(
     titleText: String,
     navController: NavController,
     context: Context,
-    navRoute: String = "",
+    actionIconContent: @Composable () -> Unit,
+    navigationContent: @Composable () -> Unit,
     content: @Composable () -> Unit
 ) {
     Scaffold(
@@ -334,25 +332,12 @@ fun MyScaffold(
                         fontWeight = FontWeight.Bold
                     )
                 },
-                // 2. Navigasyon ikonu (soldaki ikon).
                 navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            tint = MaterialTheme.colorScheme.primary,
-                            contentDescription = "Geri Butonu"
-                        )
-                    }
+                    navigationContent
                 },
 
                 actions = {
-                    IconButton(onClick = { navController.navigate(navRoute) }) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            tint = MaterialTheme.colorScheme.primary,
-                            contentDescription = "Seçenekler Menüsü"
-                        )
-                    }
+                    actionIconContent
                 },
 
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -373,7 +358,7 @@ fun MyScaffold(
                 })
         }
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
