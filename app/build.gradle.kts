@@ -87,6 +87,7 @@ dependencies {
     //Video
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
+    implementation("io.coil-kt:coil-video:2.6.0")
 
 
     implementation("androidx.multidex:multidex:2.0.1")
