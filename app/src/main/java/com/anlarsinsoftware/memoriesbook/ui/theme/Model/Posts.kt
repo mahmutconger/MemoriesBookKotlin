@@ -7,6 +7,8 @@ import com.google.firebase.firestore.PropertyName
 data class Posts(
     val authorId: String = "",
     val useremail: String = "",
+    val authorUsername: String = "",
+    val authorPhotoUrl: String = "",
     val comment: String = "",
     val date: Timestamp? = null,
     val visibility: String = "public",
@@ -15,5 +17,6 @@ data class Posts(
     val likedBy: List<String> = emptyList(),
     val mediaType: String = "image",
     val mediaUrls: List<String> = emptyList(),
-    var documentId: String = "" // documentId için de varsayılan değer eklemek iyidir.
+    val thumbnailUrl: String = "",
+    var documentId: String = ""
 )
