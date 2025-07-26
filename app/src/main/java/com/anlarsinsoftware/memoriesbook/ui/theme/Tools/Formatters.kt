@@ -17,7 +17,7 @@ fun rememberFormattedTimestamp(timestamp: Timestamp?): String {
         val currentCal = Calendar.getInstance()
 
         if (messageCal.get(Calendar.YEAR) < currentCal.get(Calendar.YEAR)) {
-            SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(messageDate)
+            SimpleDateFormat("dd MMMM yyyy", Locale("tr")).format(messageDate)
         }
         else {
             SimpleDateFormat("dd MMMM, HH:mm", Locale("tr")).format(messageDate)
