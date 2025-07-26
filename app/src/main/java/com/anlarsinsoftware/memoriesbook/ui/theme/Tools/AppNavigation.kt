@@ -12,12 +12,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.* // View altındaki her şeyi import et
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.CreatePostScreen
+import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.ThumbnailSelectorScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.*
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.MediaViewerScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen.*
@@ -81,6 +84,14 @@ fun AppNavigation() {
                         connectionsViewModel = connectionsViewModel,
 
                     )
+                }
+
+                composable(
+                    "thumbnail_selector/{videoUri}",
+                    arguments = listOf(navArgument("videoUri") { type = NavType.StringType })
+                ) { backStackEntry ->
+                    val encodedUri = backStackEntry.arguments?.getString("videoUri") ?: ""
+                    ThumbnailSelectorScreen(navController, videoUriString = encodedUri)
                 }
 
                 composable("media_viewer/{postId}/{initialIndex}") { backStackEntry ->
