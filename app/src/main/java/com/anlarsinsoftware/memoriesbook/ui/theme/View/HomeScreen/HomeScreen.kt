@@ -10,6 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -52,6 +53,7 @@ import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.BottomNavigationBar
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ExpandableText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.MyScaffold
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButtonPainter
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
 import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.rememberFormattedTimestamp
@@ -101,40 +103,26 @@ fun HomeScreen(
 
     val currentUser = FirebaseAuth.getInstance().currentUser
 
-    Scaffold(
-        topBar = {
-            TopAppBar(title = {
-                Text("Memories Book", fontWeight = FontWeight.Medium)
-            }, actions = {
-                IconButton(onClick = {}) {
-                    Icon(
-                        imageVector = Icons.Default.Menu,
-                        tint = MaterialTheme.colorScheme.primary,
-                        contentDescription = "Seçenekler Menüsü"
-                    )
-                }
-            })
-        },
-        bottomBar = {
-            BottomNavigationBar(
-                context = context,
-                createPostClick = {
-                    navController.navigate("createPost_screen")
-                },
-                profileClick = {
-                    navController.navigate("profile_screen")
-                }, messageClick = {
-                    navController.navigate("messages_screen")
-                }, homeClick = {
 
-                }, homeTint = MaterialTheme.colorScheme.primary
-            )
-        }
-    ) { innerPadding ->
+    MyScaffold(
+        titleText = "Memories Book",
+        navController = navController,
+        context = context,
+        navigationContent = {
+        },
+        actionIconContent = {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.Default.Menu,
+                    tint = MaterialTheme.colorScheme.primary,
+                    contentDescription = "Menu ikonu"
+                )
+            }
+        }) {
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
         ) {
             items(items = postList) { post ->
                 PostItem(
@@ -164,6 +152,7 @@ fun HomeScreen(
             }
         }
     }
+
     if (showVisibilitySheet) {
         selectedPost?.let { post ->
             FriendSelectorBottomSheet(
@@ -187,7 +176,7 @@ fun HomeScreen(
         }
     }
 
-    if(showLikersSheet){
+    if (showLikersSheet) {
         selectedPost?.let { posts ->
             ModalBottomSheet(
                 sheetState = showLikersSheetState,
@@ -338,13 +327,19 @@ fun HomeScreen(
 
 
 @Composable
-fun VideoPlayer(videoUrl: String?, modifier: Modifier) {
+fun VideoPlayer(
+    videoUrl: String?,
+    modifier: Modifier = Modifier,
+    autoPlay: Boolean = false
+) {
     if (videoUrl == null) return
 
     val context = LocalContext.current
+
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build().apply {
             setMediaItem(MediaItem.fromUri(videoUrl))
+            playWhenReady = autoPlay
             prepare()
         }
     }
@@ -359,12 +354,13 @@ fun VideoPlayer(videoUrl: String?, modifier: Modifier) {
         factory = {
             PlayerView(it).apply {
                 player = exoPlayer
+                // Kontrollerin her zaman görünmesini sağlamak için (isteğe bağlı)
+                // controllerShowTimeoutMs = -1
             }
         },
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp)
+        modifier = modifier
     )
 }
+
 
 
