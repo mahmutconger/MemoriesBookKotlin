@@ -1,6 +1,5 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.HomeLazyItems
 
-import VideoPlayer
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -10,11 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -22,11 +19,9 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,12 +38,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.compose.AsyncImagePainter
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ExpandableText
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButtonPainter
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.rememberFormattedTimestamp
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.ExpandableText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myIconButtonPainter
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.mySpacer
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.rememberFormattedTimestamp
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
 
@@ -87,6 +83,7 @@ fun LikersItem(photoUrl: String, userName: String) {
 @Composable
 fun PostItem(
     post: Posts,
+    contentScale: ContentScale,
     onMenuClick: () -> Unit,
     onLikeClick: () -> Unit,
     onCommentClick: () -> Unit,
@@ -100,11 +97,8 @@ fun PostItem(
     }
     Card(
         modifier = Modifier
-
             .fillMaxWidth()
-
             .padding(horizontal = 16.dp, vertical = 8.dp),
-
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -150,10 +144,10 @@ fun PostItem(
             Spacer(modifier = Modifier.height(8.dp))
 
             val mediaContainerModifier = Modifier
-                .fillMaxWidth() // Genişlik her zaman ekranı kaplasın
-                .height(500.dp) // Yükseklik her zaman 500.dp olsun
+                .fillMaxWidth()
+                .height(400.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black) // Resim tam sığmazsa arkaplan siyah olsun
+                .background(Color.Black)
 
             when (post.mediaType) {
                 "image" -> {
@@ -169,8 +163,7 @@ fun PostItem(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .clickable { onMediaClick(post, page) },
-                                contentScale =  ContentScale.Fit,
-                                placeholder =painterResource(id = R.drawable.ic_star)
+                                contentScale = contentScale
                             )
                         }
                         if (post.mediaUrls.size > 1) {
@@ -189,6 +182,7 @@ fun PostItem(
                         }
                     }
                 }
+
                 "video" -> {
                     Box(
                         modifier = mediaContainerModifier
@@ -197,15 +191,10 @@ fun PostItem(
                     ) {
 
                         AsyncImage(
-                            // DİKKAT: 'model' olarak post.mediaUrls.firstOrNull() yerine
-                            // post.thumbnailUrl kullandığından emin ol.
                             model = post.thumbnailUrl,
                             contentDescription = "Video Kapağı",
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Crop,
-                            // Eğer URL boşsa veya yüklenemezse varsayılan bir resim göster
-                            placeholder = painterResource(id = R.drawable.default_user),
-                            error = painterResource(id = R.drawable.default_user)
+                            contentScale = contentScale
                         )
 
                         Icon(
@@ -282,5 +271,4 @@ fun PostItem(
             }
         }
     }
-
 }
