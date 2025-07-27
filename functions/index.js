@@ -3,6 +3,7 @@ const {onCall} = require("firebase-functions/v2/https");
 const {onRequest} = require("firebase-functions/v2/https"); 
 const {setGlobalOptions} = require("firebase-functions/v2");
 const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore"); 
+const {onDocumentDeleted} = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 
 
@@ -199,4 +200,54 @@ exports.onUserUpdate = onDocumentUpdated("Users/{userId}", async (event) => {
   await batch.commit();
   console.log(`Kullanıcı ${userId} için ${postsSnapshot.size} post ve ${commentsSnapshot.size} yorum güncellendi.`);
   return null;
+});
+
+exports.onPostDelete = onDocumentDeleted("posts/{postId}", (event) => {
+  // 1. Silinen postun verisini alıyoruz.
+  const postData = event.data.data();
+  if (!postData) {
+    console.log("Silinen postun verisi bulunamadı.");
+    return null;
+  }
+  
+  console.log(`Post ${event.params.postId} silindi. Medya dosyaları temizleniyor...`);
+
+  const storage = admin.storage();
+  const bucket = storage.bucket(); // Varsayılan storage bucket'ını al
+
+  // 2. Silinecek tüm URL'leri tek bir listede toplayalım.
+  const urlsToDelete = [];
+  if (postData.mediaUrls && Array.isArray(postData.mediaUrls)) {
+    urlsToDelete.push(...postData.mediaUrls);
+  }
+  if (postData.thumbnailUrl) {
+    urlsToDelete.push(postData.thumbnailUrl);
+  }
+
+  if (urlsToDelete.length === 0) {
+    console.log("Silinecek medya dosyası bulunamadı.");
+    return null;
+  }
+  
+  // 3. Her bir URL için silme işlemini başlat.
+  const deletePromises = urlsToDelete.map((url) => {
+    try {
+      // Firebase Storage URL'sinden dosya yolunu (path) çıkarmamız gerekiyor.
+      // Örnek URL: https://firebasestorage.googleapis.com/v0/b/your-project-id.appspot.com/o/media%2Ffile.jpg?alt=media&token=...
+      // Bize sadece "media/file.jpg" kısmı lazım.
+      const decodedUrl = decodeURIComponent(url);
+      const filePath = decodedUrl.split("/o/")[1].split("?")[0];
+      
+      console.log(`Storage'dan siliniyor: ${filePath}`);
+      return bucket.file(filePath).delete();
+    } catch (error) {
+      console.error(`URL'den dosya yolu çıkarılamadı veya geçersiz URL: ${url}`, error);
+      return null;
+    }
+  });
+
+  // Tüm silme işlemlerinin bitmesini bekle.
+  return Promise.all(deletePromises)
+      .then(() => console.log("Tüm medya dosyaları başarıyla silindi."))
+      .catch((err) => console.error("Medya dosyaları silinirken bir hata oluştu:", err));
 });
