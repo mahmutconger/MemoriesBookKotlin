@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavBackStackEntry
@@ -18,7 +19,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.navigation
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.anlarsinsoftware.memoriesbook.ui.theme.View.* // View altındaki her şeyi import et
+import com.anlarsinsoftware.memoriesbook.ui.theme.DataStore.LayoutDataStore
+import com.anlarsinsoftware.memoriesbook.ui.theme.DataStore.ThemeDataStore
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.CreatePostScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen.ThumbnailSelectorScreen
 import com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance.*
@@ -34,6 +36,12 @@ fun AppNavigation() {
     val context = LocalContext.current
     val themeDataStore = remember { ThemeDataStore(context) }
     val isDarkMode by themeDataStore.getTheme.collectAsState(initial = false)
+
+    val layoutDataStore = remember { LayoutDataStore(context) }
+    val contentScaleString by layoutDataStore.getContentScale.collectAsState(initial = "crop")
+    val contentScale = if (contentScaleString == "fit") ContentScale.Fit else ContentScale.Crop
+
+
     val scope = rememberCoroutineScope()
 
     MemoriesBookTheme(darkTheme = isDarkMode) {
@@ -82,7 +90,7 @@ fun AppNavigation() {
                         homeViewModel = homeViewModel,
                         commentsViewModel = commentsViewModel,
                         connectionsViewModel = connectionsViewModel,
-
+                        contentScale = contentScale
                     )
                 }
 
@@ -115,11 +123,35 @@ fun AppNavigation() {
 
                     CreatePostScreen(navController, createPostViewModel = createPostViewModel, connectionsViewModel =connectionsViewModel ) // Kendi ViewModel'i var
                 }
-                composable("profile_screen") {
-                    val connectionsViewModel: ConnectionsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
-                    val profileViewModel: ProfileViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
-                    ProfileScreen(navController, connectionsViewModel, profileViewModel)
+
+                composable(
+                    route = "profile_screen/{userId}",
+                    arguments = listOf(navArgument("userId") { defaultValue = "me" })
+                ) { backStackEntry ->
+                    val userId = backStackEntry.arguments?.getString("userId") ?: "me"
+
+                    // Bu grafiğe ait olan, yaşayan ViewModel'leri alıyoruz.
+                    val mainGraphEntry = remember(backStackEntry) { navController.getBackStackEntry("main_flow") }
+                    val homeViewModel: HomeViewModel = viewModel(mainGraphEntry)
+                    val commentsViewModel: CommentsViewModel = viewModel(mainGraphEntry)
+                    val connectionsViewModel: ConnectionsViewModel = viewModel(mainGraphEntry)
+                    val messagesViewModel: MessagesViewModel = viewModel(mainGraphEntry)
+
+                    // ProfileViewModel'i bu ekrana özel olarak oluşturuyoruz.
+                    val profileViewModel: ProfileViewModel = viewModel(
+                        factory = ProfileViewModelFactory(userId = userId)
+                    )
+
+                    ProfileScreen(
+                        navController = navController,
+                        profileViewModel = profileViewModel,
+                        homeViewModel = homeViewModel,
+                        commentsViewModel = commentsViewModel,
+                        connectionsViewModel = connectionsViewModel,
+                        messagesViewModel = messagesViewModel
+                    )
                 }
+
                 composable("settings_screen") {
                     val toggleTheme: () -> Unit = {
                         scope.launch { themeDataStore.setTheme(!isDarkMode) }
@@ -127,7 +159,13 @@ fun AppNavigation() {
                     SettingsScreen(
                         navController = navController,
                         isDarkMode = isDarkMode,
-                        onThemeToggle = toggleTheme
+                        onThemeToggle = toggleTheme,
+                        currentScaleMode = contentScaleString,
+                        onScaleModeChange = { newMode ->
+                            scope.launch {
+                                layoutDataStore.setContentScale(newMode)
+                            }
+                        }
                     )
                 }
                 composable("messages_screen") {
