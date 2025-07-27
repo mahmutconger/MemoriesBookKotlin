@@ -27,7 +27,7 @@ fun MediaViewerScreen(
     postId: String,
     initialIndex: Int
 ) {
-    // ViewModel'deki post listesinden doğru postu bul
+    var isImageZoomed by remember { mutableStateOf(false) }
     val post by remember(postId) {
         derivedStateOf {
             homeViewModel.posts.value.find { it.documentId == postId }
@@ -35,18 +35,7 @@ fun MediaViewerScreen(
     }
 
     Scaffold(
-        containerColor = Color.Black, // Tam ekran için arkaplan siyah
-        topBar = {
-            TopAppBar(
-                title = { Text(post?.useremail ?: "", color = Color.White) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Geri", tint = Color.White)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
+        containerColor = Color.Black,
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -61,12 +50,18 @@ fun MediaViewerScreen(
                             initialPage = initialIndex,
                             pageCount = { it.mediaUrls.size }
                         )
-                        HorizontalPager(state = pagerState) { page ->
-                            AsyncImage(
+                        HorizontalPager(
+                            state = pagerState,
+                            userScrollEnabled = !isImageZoomed
+                        ) { page ->
+                            ZoomableImage(
                                 model = it.mediaUrls[page],
                                 contentDescription = "Full Screen Image ${page + 1}",
                                 modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit // Tam ekranda resmi sığdır
+                                contentScale = ContentScale.Fit,
+                                onZoomChanged = { isZoomed ->
+                                    isImageZoomed = isZoomed
+                                }
                             )
                         }
                     }
