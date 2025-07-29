@@ -2,31 +2,21 @@ package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
 import android.util.Log
 import androidx.compose.runtime.Composable
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Message
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
-import com.google.firebase.auth.ktx.auth
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.Locale
 
-// UI'da gösterilecek arkadaş profili
-data class FriendProfile(
-    val uid: String = "",
-    val username: String = "",
-    val photoUrl: String = "",
-    val lastSignIn: com.google.firebase.Timestamp? = null
-)
 
 
 
@@ -58,7 +48,7 @@ class ChatDetailViewModel(
         if (friendId.isNotBlank()) {
             loadFriendProfile()
             fetchMessages()
-            observeStatus() // Durumu dinlemeyi başlat
+            observeStatus()
         }
     }
 
@@ -72,7 +62,7 @@ class ChatDetailViewModel(
     fun sendMessage(text: String) {
         val currentUser = auth.currentUser
         if (currentUser == null || text.isBlank()) {
-            return // Kullanıcı giriş yapmamışsa veya mesaj boşsa gönderme
+            return
         }
 
         val chatRoomId = getChatRoomId(currentUser.uid, friendId)
@@ -81,10 +71,7 @@ class ChatDetailViewModel(
         val message = Message(
             senderId = currentUser.uid,
             text = text
-            // timestamp, @ServerTimestamp sayesinde otomatik eklenecek
         )
-
-        // Yeni mesajı Firestore'a ekliyoruz.
         messageRef.add(message)
             .addOnSuccessListener {
                 Log.d("SendMessage", "Message sent successfully!")
@@ -94,23 +81,33 @@ class ChatDetailViewModel(
             }
     }
 
-    // fetchMessages fonksiyonundaki chatRoomId mantığını bir yardımcı fonksiyona taşıyalım
     private fun getChatRoomId(uid1: String, uid2: String): String {
         return if (uid1 > uid2) "${uid1}_$uid2" else "${uid2}_$uid1"
     }
+
+    companion object {
+        private const val MESSAGES_LIMIT = 25L
+    }
+
 
     private fun fetchMessages() {
         val currentUser = auth.currentUser ?: return
         val chatRoomId = getChatRoomId(currentUser.uid, friendId)
 
         firestore.collection("chats").document(chatRoomId).collection("messages")
-            .orderBy("timestamp", Query.Direction.ASCENDING)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .limit(MESSAGES_LIMIT)
             .addSnapshotListener { value, error ->
+                if (error != null) {
+                    Log.e("FetchMessages", "Error listening for messages", error)
+                    return@addSnapshotListener
+                }
+
                 if (value != null) {
-                    // documentId'yi de alarak map'leyelim
-                    _messages.value = value.documents.map { doc ->
-                        doc.toObject(Message::class.java)!!.copy(messageId = doc.id)
+                    val messageList = value.documents.mapNotNull { doc ->
+                        doc.toObject(Message::class.java)?.copy(messageId = doc.id)
                     }
+                    _messages.value = messageList.reversed()
                 }
             }
     }
@@ -132,7 +129,6 @@ fun formatLastSeen(status: UserStatus): String {
     }
 }
 
-// ViewModel'e HomeViewModel'i yollamak için bir Factory
 class ChatDetailViewModelFactory(  private val friendId: String,private val homeViewModel: HomeViewModel) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(ChatDetailViewModel::class.java)) {
