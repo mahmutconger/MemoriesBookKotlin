@@ -55,8 +55,9 @@ import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Message
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.formatLastSeen
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
