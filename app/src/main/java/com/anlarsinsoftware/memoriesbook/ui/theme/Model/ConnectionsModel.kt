@@ -1,6 +1,5 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.Model
 
-import retrofit2.http.Url
 
 class ConnectionsModel {
 }

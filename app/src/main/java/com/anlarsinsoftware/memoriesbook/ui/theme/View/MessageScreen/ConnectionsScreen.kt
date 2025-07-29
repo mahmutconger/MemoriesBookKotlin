@@ -41,7 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.SearchResultUser
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myBrush
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 
 
@@ -63,7 +63,7 @@ fun ConnectionsScreen(
                     value = searchQuery,
                     onValueChange = { connectionsViewModel.searchQuery.value = it },
                     placeholder = { Text("Kullanıcı adı ile ara...") },
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) }
                 )
             })
