@@ -1,4 +1,3 @@
-import android.icu.text.SimpleDateFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,8 +6,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -21,20 +18,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Comments
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.ExpandableText
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButtonPainter
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.rememberFormattedTimestamp
-import com.google.firebase.Timestamp
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.ExpandableText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myImageButton
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.rememberFormattedTimestamp
 import com.google.firebase.auth.FirebaseAuth
-import java.util.Locale
 
 @Composable
 fun CommentBottomSheetContent(
