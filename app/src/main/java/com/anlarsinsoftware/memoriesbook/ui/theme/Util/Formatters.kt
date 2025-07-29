@@ -1,4 +1,4 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.Tools
+package com.anlarsinsoftware.memoriesbook.ui.theme.Util
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
