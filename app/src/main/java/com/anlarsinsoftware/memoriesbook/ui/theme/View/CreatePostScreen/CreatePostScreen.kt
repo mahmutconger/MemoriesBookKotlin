@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ProfileViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UploadUiState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -43,7 +44,7 @@ import kotlinx.coroutines.withContext
 fun CreatePostScreen(
     navController: NavController,
     createPostViewModel: CreatePostViewModel,
-    connectionsViewModel: ConnectionsViewModel
+    profileViewModel : ProfileViewModel
 ) {
     val context = LocalContext.current
 
@@ -59,8 +60,8 @@ fun CreatePostScreen(
     val thumbnailBitmap by createPostViewModel.thumbnailBitmap.collectAsState()
     val comment by createPostViewModel.comment.collectAsState()
 
-    val friends by connectionsViewModel.friends.collectAsState()
-    val followers by connectionsViewModel.followers.collectAsState()
+    val followers by profileViewModel.followers.collectAsState()
+    val friends by profileViewModel.friends.collectAsState()
 
 
     val scope = rememberCoroutineScope()
