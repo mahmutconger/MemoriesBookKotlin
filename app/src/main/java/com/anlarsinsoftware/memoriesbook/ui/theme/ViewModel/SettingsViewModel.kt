@@ -2,8 +2,8 @@ package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
 
 import androidx.lifecycle.ViewModel
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 class SettingsViewModel : ViewModel() {
     private val auth = Firebase.auth
