@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -44,6 +46,7 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CommentsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.HomeViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ProfileViewModel
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UserViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
@@ -54,13 +57,15 @@ fun HomeScreen(
     navController: NavController,
     homeViewModel: HomeViewModel,
     commentsViewModel: CommentsViewModel,
-    profileViewModel: ProfileViewModel,
+    userViewModel: UserViewModel,
     contentScale: ContentScale
 ) {
     val postList by homeViewModel.posts.collectAsState()
     val likers by homeViewModel.postLikers.collectAsState()
-    val friends by profileViewModel.friends.collectAsState()
-    val followers by profileViewModel.followers.collectAsState()
+    val userUiState by userViewModel.uiState.collectAsState()
+    val friends = userUiState.myFriends
+    val followers = userUiState.myFollowers
+
     var fullScreenVideoUrl by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
@@ -80,7 +85,7 @@ fun HomeScreen(
     val currentUser = FirebaseAuth.getInstance().currentUser
 
 
-    MyHomeScaffold (
+    MyHomeScaffold(
         titleText = "Memories Book",
         navController = navController,
         context = context,
@@ -122,7 +127,7 @@ fun HomeScreen(
                         navController.navigate("media_viewer/${clickedPost.documentId}/${startIndex}")
                     }, onVideoFullScreen = { videoUrl ->
                         fullScreenVideoUrl = videoUrl
-                    },onAuthorClick = { authorId ->
+                    }, onAuthorClick = { authorId ->
                         val route = if (authorId == currentUser?.uid) {
                             "profile_screen/me"
                         } else {
@@ -135,8 +140,13 @@ fun HomeScreen(
         }
     }
 
+    Log.d("FriendCheck", "Friends count: ${friends.size}, Followers count: ${followers.size}")
+
+
     if (showVisibilitySheet) {
         selectedPost?.let { post ->
+          //  Log.d("SelectorLog","boyut : ${post.size}")
+            Log.d("SelectorLog","selectorFriends : ${friends.size}")
             FriendSelectorBottomSheet(
                 friends = friends,
                 followers = followers,
