@@ -4,21 +4,20 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Posts
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
-import com.google.firebase.auth.ktx.auth
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.showToast
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ServerValue
 import com.google.firebase.database.ValueEventListener
-import com.google.firebase.database.ktx.database
+import com.google.firebase.database.database
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +43,8 @@ class HomeViewModel : ViewModel() {
 
     private val _postLikers = MutableStateFlow<List<FriendProfile>>(emptyList())
     val postLikers: StateFlow<List<FriendProfile>> = _postLikers.asStateFlow()
+
+
 
     init {
         val currentUser = auth.currentUser
@@ -108,10 +109,10 @@ class HomeViewModel : ViewModel() {
             .addSnapshotListener { snapshot, e ->
                 if (e != null) { close(e); return@addSnapshotListener }
 
-                // DÜZELTME: documentId'yi manuel olarak ata
-                val postsWithIds = snapshot?.documents?.map { doc ->
+
+                val postsWithIds = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Posts::class.java)?.copy(documentId = doc.id)
-                }?.filterNotNull() ?: emptyList()
+                } ?: emptyList()
 
                 trySend(postsWithIds)
             }
@@ -127,10 +128,10 @@ class HomeViewModel : ViewModel() {
             .addSnapshotListener { snapshot, e ->
                 if (e != null) { close(e); return@addSnapshotListener }
 
-                // DÜZELTME: documentId'yi manuel olarak ata
-                val postsWithIds = snapshot?.documents?.map { doc ->
+
+                val postsWithIds = snapshot?.documents?.mapNotNull { doc ->
                     doc.toObject(Posts::class.java)?.copy(documentId = doc.id)
-                }?.filterNotNull() ?: emptyList()
+                } ?: emptyList()
 
                 trySend(postsWithIds)
             }
