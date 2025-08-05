@@ -4,9 +4,6 @@ import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Followers
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Following
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendRequest
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.PendingRequest
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.SearchResultUser
@@ -145,23 +142,17 @@ class ConnectionsViewModel : ViewModel() {
     }
 
     fun acceptFriendRequest(request: PendingRequest) {
-        val currentUser = auth.currentUser ?: return
 
-        val batch = firestore.batch()
-
-        val requestRef = firestore.collection("friend_requests").document(request.requestId)
-        batch.update(requestRef, "status", "accepted")
-
-        val myRef = firestore.collection("Users").document(currentUser.uid)
-        batch.update(myRef, "friends", FieldValue.arrayUnion(request.senderProfile.uid))
-
-        val senderRef = firestore.collection("Users").document(request.senderProfile.uid)
-        batch.update(senderRef, "friends", FieldValue.arrayUnion(currentUser.uid))
-
-        batch.commit().addOnSuccessListener {
-            fetchFriendRequests()
-           // fetchFollowers()
-        }
+        firestore.collection("friend_requests").document(request.requestId)
+            .update("status", "accepted")
+            .addOnSuccessListener {
+                // İstek kabul edildiği için listeden de kaldırabiliriz.
+                Log.d("ConnectionsViewModel", "İstek kabul edildi, Cloud Function tetiklenecek.")
+                fetchFriendRequests()
+            }
+            .addOnFailureListener {
+                Log.e("ConnectionsViewModel", "İstek kabul etme başarısız.", it)
+            }
     }
 
     fun declineFriendRequest(requestId: String) {
