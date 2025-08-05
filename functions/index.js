@@ -100,6 +100,46 @@ exports.updateFriendsOnFollow = onDocumentUpdated("Users/{userId}", async (event
   return null;
 });
 
+
+//takip isteği
+
+/**
+ * Bir takip isteği 'accepted' olarak güncellendiğinde tetiklenir.
+ * Sadece ilk tek yönlü takibi oluşturur.
+ */
+exports.onFollowRequestAccepted = onDocumentUpdated("friend_requests/{requestId}", async (event) => {
+  const beforeData = event.data.before.data();
+  const afterData = event.data.after.data();
+
+  // Sadece 'status' alanı 'pending' iken 'accepted' olduğunda çalış.
+  if (beforeData.status !== "pending" || afterData.status !== "accepted") {
+    console.log("Durum 'accepted' olarak değişmedi, işlem yapılmadı.");
+    return null;
+  }
+
+  const requesterId = afterData.senderId;   // İsteği gönderen (takip edecek olan)
+  const receiverId = afterData.receiverId; // İsteği alan (takip edilecek olan)
+
+  console.log(`${receiverId}, ${requesterId}'ın takip isteğini kabul etti.`);
+
+  const batch = db.batch();
+
+  // 1. İsteği alan kişinin (B) 'followers' listesine istek göndereni (A) ekle.
+  const receiverRef = db.collection("Users").doc(receiverId);
+  batch.update(receiverRef, { followers: admin.firestore.FieldValue.arrayUnion(requesterId) });
+
+  // 2. İstek gönderen kişinin (A) 'following' listesine isteği alanı (B) ekle.
+  const requesterRef = db.collection("Users").doc(requesterId);
+  batch.update(requesterRef, { following: admin.firestore.FieldValue.arrayUnion(receiverId) });
+
+  // 3. (İsteğe bağlı) İşlenen isteği sil.
+  batch.delete(event.data.after.ref);
+
+  await batch.commit();
+  console.log(`Takip ilişkisi başarıyla oluşturuldu: ${requesterId} --> ${receiverId}`);
+  return null;
+});
+
 //BİLDİRİM MEKANİZMASI
 
 
