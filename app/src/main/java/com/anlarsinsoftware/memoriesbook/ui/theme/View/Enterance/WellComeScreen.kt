@@ -15,10 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myButton
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myText
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myBrush
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myButton
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.mySpacer
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myText
 
 @Composable
 fun WellComeScreen(modifier: Modifier = Modifier, navController: NavController) {
