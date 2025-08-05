@@ -1,20 +1,28 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.CreatePostScreen
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Followers
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
+import coil.compose.AsyncImage
+import com.anlarsinsoftware.memoriesbook.R
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Users
 
-// ... (gerekli diğer importlar)
 
-// BottomSheet içindeki sekmeleri tanımlamak için
 private enum class FriendListTab(val title: String) {
     FRIENDS("Arkadaşlar"),
     FOLLOWERS("Takipçiler")
@@ -23,26 +31,51 @@ private enum class FriendListTab(val title: String) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendSelectorBottomSheet(
-    friends: List<FriendProfile>,
-    followers: List<Followers>,
+    friends: List<Users>,
+    followers: List<Users>,
     initiallySelectedIds: List<String>,
     onDismiss: () -> Unit,
     onSelectionDone: (List<String>) -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(FriendListTab.FRIENDS) }
     var searchQuery by remember { mutableStateOf("") }
-    // Değişiklikleri geçici bir listede tutuyoruz, "Tamam"a basınca ana state'i güncelliyoruz.
     val selectedIds =
         remember { mutableStateListOf<String>().also { it.addAll(initiallySelectedIds) } }
+
+    val listToDisplay = remember(selectedTab, friends, followers, searchQuery) {
+        val sourceList = if (selectedTab == FriendListTab.FRIENDS) friends else followers
+        sourceList.filter {
+            it.username.contains(
+                searchQuery,
+                ignoreCase = true
+            ) && it.uid.isNotBlank()
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
                 .heightIn(max = 500.dp)
-                .padding(horizontal = 16.dp)
         ) {
-
-            TabRow(selectedTabIndex = selectedTab.ordinal) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Default.Close, contentDescription = "Değişikliliği iptal et")
+                }
+                IconButton(onClick = { onSelectionDone(selectedIds.toList()) }) {
+                    Icon(Icons.Default.Check, contentDescription = "Değişikliği onayla")
+                }
+            }
+            TabRow(
+                selectedTabIndex = selectedTab.ordinal,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            ) {
                 FriendListTab.values().forEach { tab ->
                     Tab(
                         selected = selectedTab == tab,
@@ -51,69 +84,46 @@ fun FriendSelectorBottomSheet(
                     )
                 }
             }
-
-            // --- ARAMA ÇUBUĞU ---
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
                 label = { Text("Ara...") },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // --- KULLANICI LİSTESİ ---
-            LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                // --- Arkadaşlar Sekmesi ---
-                if (selectedTab == FriendListTab.FRIENDS) {
-                    val filteredList =
-                        friends.filter { it.username.contains(searchQuery, ignoreCase = true) }
-                    items(items = filteredList, key = { it.uid }) { user ->
-                        SelectableUserItem(
-                            name = user.username,
-                            isSelected = user.uid in selectedIds,
-                            onToggle = {
-                                if (user.uid in selectedIds) selectedIds.remove(user.uid)
-                                else selectedIds.add(user.uid)
-                            }
-                        )
-                    }
-                }
-                // --- Takipçiler Sekmesi ---
-                else {
-                    val filteredList =
-                        followers.filter { it.username.contains(searchQuery, ignoreCase = true) }
-                    items(items = filteredList, key = { it.uid }) { user ->
-                        SelectableUserItem(
-                            name = user.username,
-                            isSelected = user.uid in selectedIds,
-                            onToggle = {
-                                if (user.uid in selectedIds) selectedIds.remove(user.uid)
-                                else selectedIds.add(user.uid)
-                            }
-                        )
-                    }
-                }
-
-                // DEĞİŞİKLİK BURADA: Butonu LazyColumn'un son elemanı olarak ekliyoruz
-                item {
-                    Button(
-                        onClick = { onSelectionDone(selectedIds.toList()) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp)
-                    ) {
-                        Text("Tamam")
-                    }
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                items(items = listToDisplay, key = { it.uid }) { user ->
+                    SelectableUserItem(
+                        name = user.username,
+                        email = user.email,
+                        photoUrl = user.photoUrl,
+                        isSelected = user.uid in selectedIds,
+                        onToggle = {
+                            if (user.uid in selectedIds) selectedIds.remove(user.uid)
+                            else selectedIds.add(user.uid)
+                        }
+                    )
                 }
             }
         }
     }
 }
 
-// Listede gösterilecek her bir seçilebilir kullanıcı satırı
 @Composable
-fun SelectableUserItem(name: String, isSelected: Boolean, onToggle: () -> Unit) {
+fun SelectableUserItem(
+    name: String,
+    email: String,
+    photoUrl: String?,
+    isSelected: Boolean,
+    onToggle: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -123,6 +133,21 @@ fun SelectableUserItem(name: String, isSelected: Boolean, onToggle: () -> Unit) 
     ) {
         Checkbox(checked = isSelected, onCheckedChange = { onToggle() })
         Spacer(modifier = Modifier.width(16.dp))
-        Text(name)
+
+        AsyncImage(
+            model = photoUrl,
+            contentDescription = "$name profil fotoğrafı",
+            error = painterResource(id = R.drawable.default_user),
+            placeholder = painterResource(id = R.drawable.default_user),
+            modifier = Modifier
+                .size(50.dp)
+                .clip(CircleShape)
+                .border(1.dp, Color.LightGray, shape = CircleShape)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(name, fontWeight = FontWeight.Bold)
+            Text(email, style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
