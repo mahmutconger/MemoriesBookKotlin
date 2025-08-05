@@ -1,4 +1,4 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.Tools
+package com.anlarsinsoftware.memoriesbook.ui.theme.DataStore
 
 import android.content.Context
 import androidx.datastore.core.DataStore
