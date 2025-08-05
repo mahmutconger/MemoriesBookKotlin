@@ -12,18 +12,6 @@ data class SearchResultUser(
     // İsteğe bağlı olarak requestStatus: "sent", "friends", "none" gibi bir alan eklenebilir
 )
 
-//profil için takipçiler ve takip edilenler
-data class Followers(
-    val uid: String = "",
-    val username: String = "",
-    val email: String = ""
-)
-
-data class Following(
-    val uid: String = "",
-    val username: String = "",
-    val email: String = ""
-)
 
 //takip isteklerini görüntüleme
 data class FriendRequest(
