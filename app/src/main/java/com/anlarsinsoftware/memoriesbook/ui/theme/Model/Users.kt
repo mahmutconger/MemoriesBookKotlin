@@ -1,10 +1,10 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.Model
 
-data class User(
-    val userId: String = "",
+data class Users(
+    val uid: String = "",
     val username: String = "",
     val photoUrl: String? = null,
-    val useremail: String = "",
+    val email: String = "",
     val fcmToken: String = "",
     val lastSignIn: com.google.firebase.Timestamp? = null,
     val followers: List<String> = emptyList(),
