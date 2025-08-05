@@ -62,8 +62,10 @@ fun PostDetailScreen(
 
     val comments by commentsViewModel.comments.collectAsState()
     val likers by homeViewModel.postLikers.collectAsState()
-    val friends by userViewModel.myFriends.collectAsState()
-    val followers by userViewModel.myFollowers.collectAsState()
+    val userUiState by userViewModel.uiState.collectAsState()
+    val friends = userUiState.myFriends
+    val followers = userUiState.myFollowers
+
 
     // --- ANA ARAYÜZ (SCAFFOLD) ---
     Scaffold(
