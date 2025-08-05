@@ -35,6 +35,7 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ConnectionsViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.CreatePostViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ProfileViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UploadUiState
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.UserViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,7 +45,7 @@ import kotlinx.coroutines.withContext
 fun CreatePostScreen(
     navController: NavController,
     createPostViewModel: CreatePostViewModel,
-    profileViewModel : ProfileViewModel
+    userViewModel: UserViewModel
 ) {
     val context = LocalContext.current
 
@@ -60,8 +61,10 @@ fun CreatePostScreen(
     val thumbnailBitmap by createPostViewModel.thumbnailBitmap.collectAsState()
     val comment by createPostViewModel.comment.collectAsState()
 
-    val followers by profileViewModel.followers.collectAsState()
-    val friends by profileViewModel.friends.collectAsState()
+    val userUiState by userViewModel.uiState.collectAsState()
+    val friends = userUiState.myFriends
+    val followers = userUiState.myFollowers
+
 
 
     val scope = rememberCoroutineScope()
