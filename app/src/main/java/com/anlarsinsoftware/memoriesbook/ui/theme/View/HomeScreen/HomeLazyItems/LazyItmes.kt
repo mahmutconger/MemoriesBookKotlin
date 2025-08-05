@@ -89,7 +89,8 @@ fun PostItem(
     onCommentClick: () -> Unit,
     onShowLikersClick: () -> Unit,
     onMediaClick: (post: Posts, startIndex: Int) -> Unit,
-    onVideoFullScreen: (videoUrl: String) -> Unit
+    onVideoFullScreen: (videoUrl: String) -> Unit,
+    onAuthorClick: (authorId: String) -> Unit
 ) {
     val currentUser = Firebase.auth.currentUser
     val isLikedByMe by remember(post.likedBy, currentUser) {
@@ -103,7 +104,13 @@ fun PostItem(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
 
-            Row(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { onAuthorClick(post.authorId) }
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
 
                 AsyncImage(
                     model = post.authorPhotoUrl,
