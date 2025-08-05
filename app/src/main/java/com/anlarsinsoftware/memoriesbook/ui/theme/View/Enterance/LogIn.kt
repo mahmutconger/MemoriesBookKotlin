@@ -35,11 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.anlarsinsoftware.memoriesbook.R
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myImageButton
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.mySpacer
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myTextField
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.showToast
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myBrush
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myImageButton
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.mySpacer
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myTextField
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LogInViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LoginUiState
 import com.google.android.gms.auth.api.signin.GoogleSignIn
@@ -176,10 +176,6 @@ fun LoginScreen(
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp
                     )
-                }
-                if (uiState is LoginUiState.Loading) {
-                    Spacer(Modifier.height(16.dp))
-                    CircularProgressIndicator()
                 }
 
             }
