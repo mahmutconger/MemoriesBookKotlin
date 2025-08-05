@@ -1,7 +1,8 @@
-package com.anlarsinsoftware.memoriesbook.ui.theme.Tools
+package com.anlarsinsoftware.memoriesbook.ui.theme.Util
 
 import android.content.Context
 import android.widget.Toast
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
@@ -20,8 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
@@ -29,7 +30,6 @@ import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -42,6 +42,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
@@ -52,9 +53,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import com.anlarsinsoftware.memoriesbook.R
-import com.google.common.io.Resources
-import kotlinx.coroutines.launch
 
 @Composable
 fun myBrush(): Brush {
@@ -206,50 +206,46 @@ fun myImageButton(id: Int, imageSize: Int = 30, onClick: () -> Unit) {
     )
 }
 
+data class BottomNavItem(
+    val route: String,
+    @DrawableRes val iconResId: Int,
+    val onClick: () -> Unit
+)
+
 @Composable
 fun BottomNavigationBar(
-    context: Context,
-    createPostClick: () -> Unit,
-    profileClick: () -> Unit,
-    homeClick: () -> Unit,
-    messageClick: () -> Unit,
-    bgColorProfile: Color = Color.Transparent,
-    bgColorCreatePost: Color = Color.Transparent,
-    bgColorMessage: Color = Color.Transparent,
+    items: List<BottomNavItem>,
+    currentRoute: String?
 ) {
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .padding(bottom = 5.dp),
+            .padding(bottom = 10.dp)
+            .background(MaterialTheme.colorScheme.surface),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceAround
     ) {
+        items.forEach { item ->
 
-        myIconButtonPainter (
-            resourcesId = R.drawable.home_icon,
-            tintColor = MaterialTheme.colorScheme.primary
-        ) {
-            homeClick()
-        }
-        myIconButtonPainter(
-            resourcesId = R.drawable.person_ico,
-            tintColor = MaterialTheme.colorScheme.primary
-        ) {
-            profileClick()
-        }
-        myIconButtonPainter(
-            resourcesId = R.drawable.add_post,
-            tintColor = MaterialTheme.colorScheme.primary
-        ) {
-            createPostClick()
-        }
-        myIconButtonPainter(
-            resourcesId = R.drawable.message_circle2,
-            tintColor = MaterialTheme.colorScheme.primary
-        ) {
-            messageClick()
+            val isSelected = currentRoute == item.route
+            val background = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent
+            val contentColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(CircleShape)
+                    .background(background)
+                    .clickable(onClick = item.onClick),
+                contentAlignment = Alignment.Center
+            ) {
+                myIconButtonPainter(
+                    resourcesId = item.iconResId,
+                    tintColor = contentColor,
+                    onClick = item.onClick,
+                )
+            }
         }
     }
 }
@@ -262,6 +258,10 @@ fun ProfileScaffold(
     onClickNotify: () -> Unit,
     content: @Composable () -> Unit
 ) {
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
 
     Scaffold(
         topBar = {
@@ -289,17 +289,32 @@ fun ProfileScaffold(
                 )
             )
         }, bottomBar = {
+            val navItems = listOf(
+                BottomNavItem(
+                    route = "home_screen",
+                    iconResId = R.drawable.home_icon,
+                    onClick = { navController.navigate("home_screen") }
+                ),
+                BottomNavItem(
+                    route = "messages_screen",
+                    iconResId = R.drawable.message_circle2,
+                    onClick = { navController.navigate("messages_screen") }
+                ),
+                BottomNavItem(
+                    route = "createPost_screen",
+                    iconResId = R.drawable.add_post,
+                    onClick = { navController.navigate("createPost_screen") }
+                ),
+                BottomNavItem(
+                    route = "profile_screen",
+                    iconResId = R.drawable.person_ico,
+                    onClick = { navController.navigate("profile_screen/me") }
+                )
+            )
             BottomNavigationBar(
-                context = context,
-                createPostClick = {
-                    navController.navigate("createPost_screen")
-                }, profileClick = {
-                    navController.navigate("profile_screen")
-                }, messageClick = {
-                    navController.navigate("messages_screen")
-                }, homeClick = {
-                    navController.navigate("home_screen")
-                })
+                items = navItems,
+                currentRoute = currentRoute
+            )
         }
     ) { innerPadding ->
         Column(
@@ -320,6 +335,9 @@ fun MyScaffold(
     navigationContent: @Composable () -> Unit,
     content: @Composable () -> Unit
 ) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -333,11 +351,11 @@ fun MyScaffold(
                     )
                 },
                 navigationIcon = {
-                    navigationContent
+                    navigationContent()
                 },
 
                 actions = {
-                    actionIconContent
+                    actionIconContent()
                 },
 
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -345,17 +363,102 @@ fun MyScaffold(
                 )
             )
         }, bottomBar = {
+            val navItems = listOf(
+                BottomNavItem(
+                    route = "home_screen",
+                    iconResId = R.drawable.home_icon,
+                    onClick = { navController.navigate("home_screen") }
+                ),
+                BottomNavItem(
+                    route = "messages_screen",
+                    iconResId = R.drawable.message_circle2,
+                    onClick = { navController.navigate("messages_screen") }
+                ),
+                BottomNavItem(
+                    route = "createPost_screen",
+                    iconResId = R.drawable.add_post,
+                    onClick = { navController.navigate("createPost_screen") }
+                ),
+                BottomNavItem(
+                    route = "profile_screen",
+                    iconResId = R.drawable.person_ico,
+                    onClick = { navController.navigate("profile_screen/me") }
+                )
+            )
             BottomNavigationBar(
-                context = context,
-                createPostClick = {
-                    navController.navigate("createPost_screen")
-                }, profileClick = {
-                    navController.navigate("profile_screen")
-                }, messageClick = {
-                    navController.navigate("messages_screen")
-                }, homeClick = {
-                    navController.navigate("home_screen")
-                })
+                items = navItems,
+                currentRoute = currentRoute
+            )
+        }
+    ) { innerPadding ->
+        Box(
+            modifier = Modifier
+                .padding(innerPadding)
+                .fillMaxSize()
+        ) { content(/*TODO BURADA COLMN / ROW TANIMLAMAK DAHA KULLANIŞLI HALE GETİRECEKTİR.*/) }
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MyHomeScaffold(
+    titleText: String,
+    navController: NavController,
+    context: Context,
+    actionIconContent: @Composable () -> Unit,
+    content: @Composable () -> Unit
+) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Text(
+                        titleText,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.Start,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                actions = {
+                    actionIconContent()
+                },
+
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent
+                )
+            )
+        }, bottomBar = {
+            val navItems = listOf(
+                BottomNavItem(
+                    route = "home_screen",
+                    iconResId = R.drawable.home_icon,
+                    onClick = { navController.navigate("home_screen") }
+                ),
+                BottomNavItem(
+                    route = "messages_screen",
+                    iconResId = R.drawable.message_circle2,
+                    onClick = { navController.navigate("messages_screen") }
+                ),
+                BottomNavItem(
+                    route = "createPost_screen",
+                    iconResId = R.drawable.add_post,
+                    onClick = { navController.navigate("createPost_screen") }
+                ),
+                BottomNavItem(
+                    route = "profile_screen",
+                    iconResId = R.drawable.person_ico,
+                    onClick = { navController.navigate("profile_screen/me") }
+                )
+            )
+            BottomNavigationBar(
+                items = navItems,
+                currentRoute = currentRoute
+            )
         }
     ) { innerPadding ->
         Box(
