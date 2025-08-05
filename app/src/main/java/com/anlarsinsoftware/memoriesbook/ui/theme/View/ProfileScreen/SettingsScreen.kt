@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +29,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -45,16 +47,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.anlarsinsoftware.memoriesbook.R
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myBrush
-import com.anlarsinsoftware.memoriesbook.ui.theme.Tools.myIconButtonPainter
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myBrush
+import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myIconButtonPainter
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,7 +63,9 @@ fun SettingsScreen(
     navController: NavController,
     isDarkMode: Boolean,
     onThemeToggle: () -> Unit,
-    settingsViewModel: SettingsViewModel = viewModel()
+    settingsViewModel: SettingsViewModel = viewModel(),
+    currentScaleMode: String,
+    onScaleModeChange: (String) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -140,6 +142,31 @@ fun SettingsScreen(
                     onCheckedChange = { onThemeToggle() }
                 )
             })
+
+            myCard("Gönderi Görünümü") {
+                Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onScaleModeChange("fit") }
+                    ) {
+                        RadioButton(
+                            selected = currentScaleMode == "fit",
+                            onClick = { onScaleModeChange("fit") }
+                        )
+                        Text("Sığdır (Tamamı görünsün)")
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onScaleModeChange("crop") }
+                    ) {
+                        RadioButton(
+                            selected = currentScaleMode == "crop",
+                            onClick = { onScaleModeChange("crop") }
+                        )
+                        Text("Kırp (Alanı doldursun)")
+                    }
+                }
+            }
 
             myCard("Bildirimler", rowScope = {
                 if (!hasNotificationPermission) {
