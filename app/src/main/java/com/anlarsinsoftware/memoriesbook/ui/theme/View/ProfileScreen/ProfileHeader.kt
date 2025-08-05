@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -21,16 +23,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.FriendProfile
-import com.anlarsinsoftware.memoriesbook.ui.theme.Model.User
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Users
 
 // ProfileHeader'ın yeni ve daha temiz imzası
 @Composable
 fun ProfileHeader(
-    user: User?,
+    user: Users?,
     followersCount: Int,
     followingCount: Int,
     friendsCount: Int,
+    isCurrentUserProfile: Boolean,
     onFollowersClick: () -> Unit,
     onFollowingClick: () -> Unit,
     onFriendsClick: () -> Unit,
@@ -50,12 +52,29 @@ fun ProfileHeader(
         Text(user?.username ?: "", style = MaterialTheme.typography.titleLarge)
         Spacer(modifier = Modifier.height(8.dp))
 
-        Text(
-            "Profili düzenle",
-            modifier = Modifier.clickable(onClick = onEditProfileClick),
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.primary
-        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+        ) {
+            if (isCurrentUserProfile) {
+                Text(
+                    "Profili düzenle",
+                    modifier = Modifier.clickable(onClick = onEditProfileClick),
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            } else {
+                Button(onClick = { /* Takip etme mantığı */ }, modifier = Modifier.weight(1f)) {
+                    Text("Takip Et") // veya "Takipten Çık"
+                }
+                OutlinedButton(onClick = { /* Mesaj gönderme mantığı */ }, modifier = Modifier.weight(1f)) {
+                    Text("Mesaj Gönder")
+                }
+            }
+        }
+
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(
