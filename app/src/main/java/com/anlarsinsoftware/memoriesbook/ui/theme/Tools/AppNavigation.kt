@@ -84,18 +84,14 @@ fun AppNavigation() {
                     // Bu ekranda kullanılacak ViewModel'leri, bu grafiğin yaşam döngüsüne bağlıyoruz.
                     val homeViewModel: HomeViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
                     val commentsViewModel: CommentsViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
+                    val userViewModel: UserViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
 
-                    val userId = it.arguments?.getString("userId") ?: "me"
-                    val profileViewModel: ProfileViewModel = viewModel(
-                        viewModelStoreOwner = it,
-                        factory = ProfileViewModelFactory(userId)
-                    )
 
                     HomeScreen(
                         navController = navController,
                         homeViewModel = homeViewModel,
                         commentsViewModel = commentsViewModel,
-                        profileViewModel= profileViewModel,
+                        userViewModel= userViewModel,
                         contentScale = contentScale
                     )
                 }
@@ -125,15 +121,10 @@ fun AppNavigation() {
 
                 composable("createPost_screen") {
                     val createPostViewModel: CreatePostViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
-
-                    val userId = it.arguments?.getString("userId") ?: "me"
-                    val profileViewModel: ProfileViewModel = viewModel(
-                        viewModelStoreOwner = it,
-                        factory = ProfileViewModelFactory(userId)
-                    )
+                    val userViewModel: UserViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
 
 
-                    CreatePostScreen(navController, createPostViewModel = createPostViewModel, profileViewModel=profileViewModel) // Kendi ViewModel'i var
+                    CreatePostScreen(navController, createPostViewModel = createPostViewModel, userViewModel=userViewModel) // Kendi ViewModel'i var
                 }
 
                 composable(
@@ -142,6 +133,7 @@ fun AppNavigation() {
                 ) { backStackEntry ->
                     val userId = backStackEntry.arguments?.getString("userId") ?: "me"
                     val connectionsViewModel: ConnectionsViewModel = viewModel(backStackEntry.findViewModelStoreOwner(navController, "main_flow"))
+
                     val profileViewModel: ProfileViewModel = viewModel(
                         viewModelStoreOwner = backStackEntry,
                         factory = ProfileViewModelFactory(userId)
@@ -166,11 +158,8 @@ fun AppNavigation() {
                     val homeViewModel: HomeViewModel = viewModel(mainGraphEntry)
                     val commentsViewModel: CommentsViewModel = viewModel(mainGraphEntry)
 
-                    val userId = backStackEntry.arguments?.getString("userId") ?: "me"
-                    val profileViewModel: ProfileViewModel = viewModel(
-                        viewModelStoreOwner = backStackEntry,
-                        factory = ProfileViewModelFactory(userId)
-                    )
+                    val userViewModel: UserViewModel = viewModel(mainGraphEntry)
+
 
                     // Bu ekrana özel ViewModel'i Factory ile oluşturuyoruz
                     val postDetailViewModel: PostDetailViewModel = viewModel(
@@ -182,7 +171,7 @@ fun AppNavigation() {
                         postDetailViewModel = postDetailViewModel,
                         homeViewModel = homeViewModel,
                         commentsViewModel = commentsViewModel,
-                        profileViewModel=profileViewModel
+                       userViewModel=userViewModel
                     )
                 }
             }
@@ -204,13 +193,9 @@ fun AppNavigation() {
                     )
                 }
                 composable("messages_screen") {
-                    val userId = it.arguments?.getString("userId") ?: "me"
-                    val profileViewModel: ProfileViewModel = viewModel(
-                        viewModelStoreOwner = it,
-                        factory = ProfileViewModelFactory(userId)
-                    )
+                    val userViewModel: UserViewModel = viewModel(it.findViewModelStoreOwner(navController, "main_flow"))
 
-                    MessagesScreen(navController, profileViewModel =profileViewModel )
+                    MessagesScreen(navController, userViewModel=userViewModel )
                 }
                 composable("connections_screen") {
                     ConnectionsScreen(navController)
