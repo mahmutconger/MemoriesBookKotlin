@@ -2,11 +2,14 @@ package com.anlarsinsoftware.memoriesbook.ui.theme.View.MessageScreen
 
 import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.DecayAnimationSpec
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.DraggableAnchors
 import androidx.compose.foundation.gestures.Orientation
@@ -32,24 +35,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +71,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -69,12 +81,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.anlarsinsoftware.memoriesbook.R
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.DateSeparator
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Message
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.MessageListItem
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.myIconButtonPainter
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.ChatDetailViewModel
-import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.formatLastSeen
+import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.formatLastSeenString
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -82,6 +99,25 @@ import java.util.Locale
 import kotlin.collections.isNotEmpty
 import kotlin.math.roundToInt
 
+
+@Composable
+fun DateSeparatorItem(date: String) {
+    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer
+        ) {
+            Text(
+                text = date,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatDetailScreen(
@@ -92,6 +128,14 @@ fun ChatDetailScreen(
     val userStatus by chatDetailViewModel.userStatus.collectAsState()
     val messages by chatDetailViewModel.messages.collectAsState()
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var selectedMessageForMenu by remember { mutableStateOf<Message?>(null) }
+    val messageMenuSheetState = rememberModalBottomSheetState()
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showEditMessageDialog by remember { mutableStateOf(false) }
+
+
+
 
     LaunchedEffect(messages.size) {
         if (messages.isNotEmpty()) {
@@ -109,15 +153,7 @@ fun ChatDetailScreen(
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        val lastSeenText = formatLastSeen(userStatus)
-                        if (lastSeenText.isNotBlank()) {
-                            Text(
-                                text = lastSeenText,
-                                fontSize = 12.sp,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
+                        FormattedLastSeenText(status = userStatus)
                     }
                 },
                 navigationIcon = {
@@ -162,14 +198,36 @@ fun ChatDetailScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(items = messages, key = { it.messageId }) { message ->
-                    SwipeableMessageBox(
-                        message = message,
-                        isSentByCurrentUser = message.senderId == Firebase.auth.currentUser?.uid,
-                        onReply = {
-                            chatDetailViewModel.onStartReply(it)
+                items(
+                    items = messages,
+                    key = { item ->
+                        when (item) {
+                            is MessageListItem -> item.message.messageId
+                            is DateSeparator -> item.date
                         }
-                    )
+                    },
+                    contentType = { item ->
+                        item::class
+                    }
+                ) { item ->
+                    when (item) {
+                        is MessageListItem -> {
+                            val message = item.message
+                            SwipeableMessageBox(
+                                message = message,
+                                isSentByCurrentUser = message.senderId == Firebase.auth.currentUser?.uid,
+                                onReply = { chatDetailViewModel.onStartReply(it) },
+                                onLongPress = {
+                                    if (message.senderId == Firebase.auth.currentUser?.uid) {
+                                        selectedMessageForMenu = it
+                                    }
+                                }
+                            )
+                        }
+                        is DateSeparator -> {
+                            DateSeparatorItem(date = item.date)
+                        }
+                    }
                 }
             }
 
@@ -187,6 +245,157 @@ fun ChatDetailScreen(
                 }
             )
         }
+    }
+
+
+
+
+
+    @Composable
+    fun MessageOptionsMenu(
+        message: Message,
+        onDismiss: () -> Unit,
+        onDelete: () -> Unit,
+        onEdit: () -> Unit
+    ) {
+        val messageTime = message.timestamp.toDate().time
+        val currentTime = System.currentTimeMillis()
+        val differenceMinutes = (currentTime - messageTime) / (1000 * 60)
+
+        val isEditable = differenceMinutes < 60
+
+        Column(modifier = Modifier.padding(bottom = 32.dp)) {
+            if (isEditable) {
+                ListItem(
+                    headlineContent = { Text("Mesajı Düzenle") },
+                    leadingContent = { Icon(Icons.Default.Edit, contentDescription = "Düzenle") },
+                    modifier = Modifier.clickable { onEdit() }
+                )
+            }
+
+            ListItem(
+                headlineContent = { Text("Mesajı Sil", color = MaterialTheme.colorScheme.error) },
+                leadingContent = {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Sil",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                modifier = Modifier.clickable { onDelete() }
+            )
+        }
+    }
+
+    if (selectedMessageForMenu != null) {
+        val message = selectedMessageForMenu!!
+
+        ModalBottomSheet(
+            onDismissRequest = { selectedMessageForMenu = null },
+            sheetState = messageMenuSheetState
+        ) {
+            MessageOptionsMenu(
+                message = message,
+                onDismiss = {
+                    scope.launch { messageMenuSheetState.hide() }.invokeOnCompletion {
+                        selectedMessageForMenu = null
+                    }
+                },
+                onDelete = {
+                    scope.launch { messageMenuSheetState.hide() }.invokeOnCompletion {
+                        showDeleteConfirmDialog = true
+                    }
+                },
+                onEdit = {
+                    scope.launch { messageMenuSheetState.hide() }.invokeOnCompletion {
+                        showEditMessageDialog = true
+                    }
+                }
+            )
+        }
+    }
+
+    if (showEditMessageDialog) {
+        selectedMessageForMenu?.let { messageToEdit ->
+            EditMessageDialog(
+                initialText = messageToEdit.text,
+                onDismiss = {
+                    showEditMessageDialog = false
+                    selectedMessageForMenu = null
+                },
+                onConfirm = { newText ->
+                    chatDetailViewModel.editMessage(messageToEdit.messageId, newText)
+                    showEditMessageDialog = false
+                    selectedMessageForMenu = null
+                }
+            )
+        }
+    }
+
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showDeleteConfirmDialog = false
+                selectedMessageForMenu = null
+            },
+            title = {
+                Text(text = "Mesajı Sil")
+            },
+            text = {
+                Text("Bu mesajı kalıcı olarak silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedMessageForMenu?.let { messageToDelete ->
+                            chatDetailViewModel.deleteMessage(messageToDelete.messageId)
+                        }
+                        showDeleteConfirmDialog = false
+                        selectedMessageForMenu = null
+                    }
+                ) {
+                    Text("Sil", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        selectedMessageForMenu = null
+                    }
+                ) {
+                    Text("İptal")
+                }
+            }
+        )
+    }
+}
+
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+@Composable
+fun FormattedLastSeenText(status: UserStatus) {
+    var lastSeenText by remember(status) {
+        mutableStateOf(
+            if (status.isOnline) "Çevrimiçi" else formatLastSeenString(status.lastSeen)
+        )
+    }
+
+    LaunchedEffect(status) {
+        if (!status.isOnline && status.lastSeen != null) {
+            while (true) {
+                lastSeenText = formatLastSeenString(status.lastSeen)
+                delay(60_000L)
+            }
+        }
+    }
+
+    if (lastSeenText.isNotBlank()) {
+        Text(
+            text = lastSeenText,
+            fontSize = 12.sp,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.Gray
+        )
     }
 }
 
@@ -218,13 +427,14 @@ private fun formatMessageTimestamp(timestamp: com.google.firebase.Timestamp?): S
         messageCal.isSameDayAs(todayCal) -> "Bugün"
         messageCal.isSameDayAs(yesterdayCal) -> "Dün"
         else -> {
-            val dayFormatter = SimpleDateFormat("E", Locale("tr")) // "E" -> Pzt, Sal...
+            val dayFormatter = SimpleDateFormat("E", Locale("tr"))
             dayFormatter.format(messageDate)
         }
     }
 
     return "$dayStr, $timeStr"
 }
+
 
 
 @Composable
@@ -313,13 +523,68 @@ fun MessageItem(
                 }
             }
         }
-        Text(
-            text = formattedTimestamp,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.DarkGray,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(top = 4.dp, start = 8.dp, end = 8.dp)
-        )
+        ) {
+
+            if (message.isEdited) {
+                Text(
+                    text = "düzenlendi",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontStyle = FontStyle.Italic,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(end = 4.dp)
+                )
+            }
+
+            Text(
+                text = formattedTimestamp,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.DarkGray
+            )
+        }
     }
+}
+
+
+@Composable
+fun EditMessageDialog(
+    initialText: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var editedText by remember { mutableStateOf(initialText) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Mesajı Düzenle") },
+        text = {
+            OutlinedTextField(
+                value = editedText,
+                onValueChange = { editedText = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Mesajınız") }
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (editedText.isNotBlank() && editedText != initialText) {
+                        onConfirm(editedText)
+                    }
+                },
+                enabled = editedText.isNotBlank()
+            ) {
+                Text("Kaydet")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("İptal")
+            }
+        }
+    )
 }
 
 
@@ -344,7 +609,7 @@ fun MessageInput(onSendMessage: (String) -> Unit) {
             onClick = {
                 if (text.isNotBlank()) {
                     onSendMessage(text)
-                    text = "" // Gönderdikten sonra metin alanını temizle
+                    text = ""
                 }
             }
         ) {
@@ -364,6 +629,7 @@ fun SwipeableMessageBox(
     message: Message,
     isSentByCurrentUser: Boolean,
     onReply: (Message) -> Unit,
+    onLongPress: (Message) -> Unit,
 ) {
     val density = LocalDensity.current
     val decayAnimationSpec: DecayAnimationSpec<Float> = remember { splineBasedDecay(density) }
@@ -393,9 +659,8 @@ fun SwipeableMessageBox(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)) // Kırpma efekti taşmayı engeller
+            .clip(RoundedCornerShape(16.dp))
     ) {
-        // ARKA PLAN: Cevapla ikonu
         Box(
             modifier = Modifier
                 .align(if (isSentByCurrentUser) Alignment.CenterEnd else Alignment.CenterStart)
@@ -422,6 +687,10 @@ fun SwipeableMessageBox(
                     state = state,
                     orientation = Orientation.Horizontal,
                     reverseDirection = isSentByCurrentUser
+                )
+                .combinedClickable(
+                    onClick = {  },
+                    onLongClick = { onLongPress(message) }
                 )
         )
     }
