@@ -1,8 +1,10 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.View.HomeScreen.HomeLazyItems
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -107,8 +109,7 @@ fun PostItem(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clickable { onAuthorClick(post.authorId) }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
 
@@ -117,7 +118,9 @@ fun PostItem(
                     contentDescription = "${post.authorUsername} profil fotoğrafı",
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape),
+                        .clip(CircleShape)
+                        .border(border = BorderStroke(1.dp, Color.LightGray), CircleShape)
+                        .clickable { onAuthorClick(post.authorId) },
                     error = painterResource(id = R.drawable.default_user),
                     placeholder = painterResource(id = R.drawable.default_user)
                 )
@@ -126,7 +129,10 @@ fun PostItem(
 
                 Column(modifier = Modifier.weight(1f)) {
 
-                    Text(text = post.authorUsername, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = post.authorUsername,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onAuthorClick(post.authorId) })
                     val formattedDate = rememberFormattedTimestamp(timestamp = post.date)
                     Text(
                         formattedDate,
