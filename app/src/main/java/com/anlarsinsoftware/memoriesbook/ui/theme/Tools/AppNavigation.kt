@@ -49,18 +49,19 @@ fun AppNavigation() {
 
         NavHost(navController = navController, startDestination = "auth_flow") {
 
-            // --- GİRİŞ ÖNCESİ EKRANLAR (Authentication Flow) ---
             navigation(startDestination = "welcome_screen", route = "auth_flow") {
                 composable("welcome_screen") {
                     WellComeScreen(navController = navController)
                 }
                 composable("register_screen") {
-                    // Kayıt başarılı olduğunda ana akışa yönlendir
                     RegisterScreen(
                         onRegisterSuccess = {
                             navController.navigate("main_flow") {
                                 popUpTo("auth_flow") { inclusive = true }
                             }
+                        },
+                        onNavigateToLogin = {
+                            navController.navigate("login_screen")
                         }
                     )
                 }
@@ -71,6 +72,8 @@ fun AppNavigation() {
                             navController.navigate("main_flow") {
                                 popUpTo("auth_flow") { inclusive = true }
                             }
+                        },  onNavigateToRegister = {
+                            navController.navigate("register_screen")
                         }
                     )
                 }
