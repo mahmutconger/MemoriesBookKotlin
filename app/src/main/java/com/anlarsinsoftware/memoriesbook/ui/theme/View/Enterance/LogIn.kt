@@ -2,6 +2,7 @@ package com.anlarsinsoftware.memoriesbook.ui.theme.View.Enterance
 
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,8 @@ import com.anlarsinsoftware.memoriesbook.ui.theme.Util.TextWhite
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.showToast
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LogInViewModel
 import com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel.LoginUiState
+import com.google.android.gms.auth.api.identity.BeginSignInRequest
+import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
@@ -48,20 +51,22 @@ fun LoginScreen(
         }
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
+    val oneTapClient = remember { Identity.getSignInClient(context) }
+
+    val googleSignInLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
-                val account = task.getResult(ApiException::class.java)!!
-                account.idToken?.let { idToken ->
+                val credential = oneTapClient.getSignInCredentialFromIntent(result.data)
+                val idToken = credential.googleIdToken
+                if (idToken != null) {
                     logInViewModel.signInWithGoogle(idToken)
-                } ?: run {
+                } else {
                     showToast(context, "Google token alınamadı.", true)
                 }
             } catch (e: ApiException) {
-                showToast(context, "Google ile giriş başarısız oldu: ${e.statusCode}", true)
+                showToast(context, "Google ile giriş başarısız oldu: ${e.message}", true)
             }
         }
     }
@@ -132,14 +137,25 @@ fun LoginScreen(
 
         SocialLogins(
             onGoogleClick = {
-                val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                    .requestIdToken(context.getString(R.string.default_web_client_id))
-                    .requestEmail()
+                val signInRequest = BeginSignInRequest.builder()
+                    .setGoogleIdTokenRequestOptions(
+                        BeginSignInRequest.GoogleIdTokenRequestOptions.builder()
+                            .setSupported(true)
+                            .setServerClientId(context.getString(R.string.default_web_client_id))
+                            .setFilterByAuthorizedAccounts(false)
+                            .build()
+                    )
+                    .setAutoSelectEnabled(true)
                     .build()
-                val googleSignInClient = GoogleSignIn.getClient(context, gso)
-                googleSignInClient.signOut().addOnCompleteListener {
-                    launcher.launch(googleSignInClient.signInIntent)
-                }
+
+                oneTapClient.beginSignIn(signInRequest)
+                    .addOnSuccessListener { result ->
+                        val intentSenderRequest = IntentSenderRequest.Builder(result.pendingIntent.intentSender).build()
+                        googleSignInLauncher.launch(intentSenderRequest)
+                    }
+                    .addOnFailureListener { e ->
+                        showToast(context, "Google ile giriş başlatılamadı: ${e.localizedMessage}", true)
+                    }
             },
             onFacebookClick = { /* Facebook giriş mantığı */ },
             onTwitterClick = { /* Twitter giriş mantığı */ }
