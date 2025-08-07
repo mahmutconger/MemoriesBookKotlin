@@ -1,12 +1,17 @@
 package com.anlarsinsoftware.memoriesbook.ui.theme.ViewModel
 
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.anlarsinsoftware.memoriesbook.R
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.ChatItem
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.DateSeparator
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Message
+import com.anlarsinsoftware.memoriesbook.ui.theme.Model.MessageListItem
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.UserStatus
 import com.anlarsinsoftware.memoriesbook.ui.theme.Model.Users
 import com.anlarsinsoftware.memoriesbook.ui.theme.Util.KISS_EMOJI_GIF
@@ -18,8 +23,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-
-
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 
 class ChatDetailViewModel(
@@ -47,8 +56,8 @@ class ChatDetailViewModel(
     private val _friendProfile = MutableStateFlow<Users?>(null)
     val friendProfile: StateFlow<Users?> = _friendProfile.asStateFlow()
 
-    private val _messages = MutableStateFlow<List<Message>>(emptyList())
-    val messages: StateFlow<List<Message>> = _messages.asStateFlow()
+    private val _messages = MutableStateFlow<List<ChatItem>>(emptyList())
+    val messages: StateFlow<List<ChatItem>> = _messages.asStateFlow()
 
     init {
         if (friendId.isNotBlank()) {
@@ -74,6 +83,24 @@ class ChatDetailViewModel(
     }
 
 
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    private fun groupMessagesByDate(messages: List<Message>): List<ChatItem> {
+        val groupedList = mutableListOf<ChatItem>()
+        var lastDate: LocalDate? = null
+
+        messages.reversed().forEach { message ->
+            val messageInstant = Instant.ofEpochMilli(message.timestamp.toDate().time)
+            val messageDate = LocalDate.ofInstant(messageInstant, ZoneId.systemDefault())
+
+            if (lastDate == null || !messageDate.isEqual(lastDate)) {
+                groupedList.add(DateSeparator(formatDateSeparator(messageDate)))
+                lastDate = messageDate
+            }
+            groupedList.add(MessageListItem(message))
+        }
+        return groupedList
+    }
 
     fun sendMessage(text: String) {
         val messageToReplyTo = _replyingToMessage.value
@@ -130,6 +157,45 @@ class ChatDetailViewModel(
             }
     }
 
+    fun deleteMessage(messageId: String) {
+        val currentUser = auth.currentUser ?: return
+        val chatRoomId = getChatRoomId(currentUser.uid, friendId)
+
+        firestore.collection("chats").document(chatRoomId)
+            .collection("messages").document(messageId)
+            .delete()
+            .addOnSuccessListener {
+                Log.d("DeleteMessage", "Mesaj başarıyla silindi.")
+            }
+            .addOnFailureListener { e ->
+                Log.e("DeleteMessage", "Mesaj silinirken hata oluştu.", e)
+            }
+    }
+
+
+    fun editMessage(messageId: String, newText: String) {
+        if (newText.isBlank()) {
+            return
+        }
+        val currentUser = auth.currentUser ?: return
+        val chatRoomId = getChatRoomId(currentUser.uid, friendId)
+        val messageRef = firestore.collection("chats").document(chatRoomId)
+            .collection("messages").document(messageId)
+
+        val updates = mapOf(
+            "text" to newText,
+            "isEdited" to true
+        )
+
+        messageRef.update(updates)
+            .addOnSuccessListener {
+                Log.d("EditMessage", "Mesaj başarıyla düzenlendi ve 'isEdited' olarak işaretlendi.")
+            }
+            .addOnFailureListener { e ->
+                Log.e("EditMessage", "Mesaj düzenlenirken hata oluştu.", e)
+            }
+    }
+
     private fun getChatRoomId(uid1: String, uid2: String): String {
         return if (uid1 > uid2) "${uid1}_$uid2" else "${uid2}_$uid1"
     }
@@ -156,27 +222,69 @@ class ChatDetailViewModel(
                     val messageList = value.documents.mapNotNull { doc ->
                         doc.toObject(Message::class.java)?.copy(messageId = doc.id)
                     }
-                    _messages.value = messageList.reversed()
+                    _messages.value = groupMessagesByDate(messageList)
                 }
             }
     }
 
 }
 
-@Composable
-fun formatLastSeen(status: UserStatus): String {
-    if (status.isOnline) return "Çevrimiçi"
+@RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+fun formatLastSeenString(lastSeenMillis: Long?): String {
+    if (lastSeenMillis == null) return "Çevrimdışı"
 
-    val lastSeenMillis = status.lastSeen ?: return "Çevrimdışı"
-    val currentTimeMillis = System.currentTimeMillis()
-    val differenceMinutes = (currentTimeMillis - lastSeenMillis) / 1000 / 60
+    val now = Instant.now()
+    val lastSeenInstant = Instant.ofEpochMilli(lastSeenMillis)
+
+    val zoneId = ZoneId.systemDefault()
+    val today = LocalDate.now(zoneId)
+    val yesterday = today.minusDays(1)
+
+    val lastSeenDate = LocalDate.ofInstant(lastSeenInstant, zoneId)
+
+    val minutesAgo = ChronoUnit.MINUTES.between(lastSeenInstant, now)
 
     return when {
-        differenceMinutes < 60 -> "$differenceMinutes dk önce"
-        differenceMinutes < 1440 -> "${differenceMinutes / 60} saat önce"
-        else -> "Dün veya daha önce"
+        minutesAgo < 1 -> "az önce"
+        minutesAgo < 60 -> "$minutesAgo dakika önce"
+        lastSeenDate.isEqual(today) -> {
+            val formatter = DateTimeFormatter.ofPattern("HH:mm", Locale("tr"))
+            "bugün, ${lastSeenInstant.atZone(zoneId).format(formatter)}"
+        }
+        lastSeenDate.isEqual(yesterday) -> {
+            val formatter = DateTimeFormatter.ofPattern("HH:mm", Locale("tr"))
+            "dün, ${lastSeenInstant.atZone(zoneId).format(formatter)}"
+        }
+        lastSeenDate.year == today.year -> {
+            val formatter = DateTimeFormatter.ofPattern("d MMM, HH:mm", Locale("tr"))
+            lastSeenInstant.atZone(zoneId).format(formatter) // Örnek: 5 Ağu, 12:50
+        }
+
+        else -> {
+            val formatter = DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", Locale("tr"))
+            lastSeenInstant.atZone(zoneId).format(formatter) // Örnek: 5 Ağu 2024, 12:50
+        }
     }
 }
+
+private fun formatDateSeparator(date: LocalDate): String {
+    val today = LocalDate.now()
+    val yesterday = today.minusDays(1)
+
+    return when {
+        date.isEqual(today) -> "Bugün"
+        date.isEqual(yesterday) -> "Dün"
+        date.year == today.year -> {
+            val formatter = DateTimeFormatter.ofPattern("d MMMM", Locale("tr"))
+            date.format(formatter)
+        }
+        else -> {
+            val formatter = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale("tr"))
+            date.format(formatter)
+        }
+    }
+}
+
 
 class ChatDetailViewModelFactory(  private val friendId: String,private val homeViewModel: HomeViewModel) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
