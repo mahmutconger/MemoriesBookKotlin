@@ -191,9 +191,9 @@ fun SocialLogins(onGoogleClick: () -> Unit,
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
     ) {
-        SocialLoginButton(R.drawable.google_ico, onClick = {onGoogleClick})
-        SocialLoginButton(R.drawable.memories, onClick = {onFacebookClick})
-        SocialLoginButton(R.drawable.memories, onClick = {onTwitterClick})
+        SocialLoginButton(R.drawable.google_ico, onClick = onGoogleClick)
+        SocialLoginButton(R.drawable.memories, onClick = onFacebookClick)
+        SocialLoginButton(R.drawable.memories, onClick = onTwitterClick)
     }
 }
 
