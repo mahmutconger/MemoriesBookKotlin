@@ -47,7 +47,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     implementation("androidx.multidex:multidex:2.0.1")
-
+    implementation("androidx.compose.material:material-icons-extended")
+    
     // COMPOSE - Bill of Materials (BoM) ile
     // BoM, tüm compose kütüphanelerinin uyumlu sürümlerini otomatik yönetir.
     implementation(platform("androidx.compose:compose-bom:2024.05.00")) // en güncel Compose BoM
@@ -81,6 +82,7 @@ dependencies {
     // COIL (Resim ve Video Yükleme)
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("io.coil-kt:coil-video:2.7.0")
+    implementation("io.coil-kt:coil-gif:2.7.0")
 
     // DATASTORE
     implementation("androidx.datastore:datastore-preferences:1.1.7")
@@ -88,6 +90,7 @@ dependencies {
     // MEDIA3 (Video Oynatıcı)
     implementation("androidx.media3:media3-exoplayer:1.7.1")
     implementation("androidx.media3:media3-ui:1.7.1")
+
 
     // TEST KÜTÜPHANELERİ
     testImplementation(libs.junit)
