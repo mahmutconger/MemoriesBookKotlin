@@ -12,6 +12,7 @@ data class Message(
     val text: String = "",
     val type: String = "text",
     val mediaUrl: String? = null,
+    val isEdited: Boolean = false,
     @ServerTimestamp
     val timestamp: Timestamp = Timestamp.now()
 )
